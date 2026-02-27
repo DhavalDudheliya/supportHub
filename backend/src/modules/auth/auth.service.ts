@@ -25,6 +25,7 @@ import {
 import { generateSlug } from "../../utils/slug.js";
 import { sendVerificationEmail } from "../../services/email.service.js";
 import { RegisterBody, LoginBody } from "./auth.types.js";
+import logger from "../../lib/logger.js";
 
 /**
  * Register a new user and create their tenant workspace.
@@ -96,7 +97,7 @@ export async function registerUser(data: RegisterBody) {
   // 6. Send the verification email in the background (fire-and-forget)
   //    Failures are logged but don't block the registration response
   sendVerificationEmail(email, emailVerifyToken, slug).catch((err) => {
-    console.error("Failed to send verification email:", err);
+    logger.error({ err }, "Failed to send verification email");
   });
 
   return {

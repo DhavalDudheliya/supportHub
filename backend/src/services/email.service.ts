@@ -12,6 +12,7 @@
  */
 
 import nodemailer from "nodemailer";
+import logger from "../lib/logger.js";
 
 /**
  * Nodemailer transporter configured from environment variables.
@@ -91,6 +92,9 @@ export async function sendVerificationEmail(
     process.env.SMTP_HOST === "smtp.ethereal.email" ||
     !process.env.SMTP_HOST
   ) {
-    console.log("📧 Preview URL:", nodemailer.getTestMessageUrl(info));
+    logger.info(
+      { previewUrl: nodemailer.getTestMessageUrl(info) },
+      "Email preview URL (Ethereal)"
+    );
   }
 }
