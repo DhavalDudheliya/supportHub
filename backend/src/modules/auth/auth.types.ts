@@ -1,39 +1,28 @@
 /**
  * Auth Module — Type Definitions
  *
- * TypeScript interfaces for the authentication module's request and response shapes.
- * These are used by the controller, service, and validation layers for type safety.
+ * TypeScript types are inferred directly from the Zod schemas,
+ * keeping validation rules and types in a single source of truth.
+ *
+ * AuthenticatedRequest is defined separately as it extends Express Request.
  */
 
 import { Request } from "express";
+import { z } from "zod";
+import {
+  registerSchema,
+  loginSchema,
+  refreshTokenSchema,
+} from "./auth.validation.js";
 
-/**
- * Request body for POST /api/auth/register.
- * Contains all fields collected during the multi-step registration flow.
- */
-export interface RegisterBody {
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  companyName: string; // Used to generate the workspace slug for tenant routing
-  password: string;
-}
+/** Inferred from registerSchema */
+export type RegisterBody = z.infer<typeof registerSchema>;
 
-/**
- * Request body for POST /api/auth/login.
- */
-export interface LoginBody {
-  email: string;
-  password: string;
-}
+/** Inferred from loginSchema */
+export type LoginBody = z.infer<typeof loginSchema>;
 
-/**
- * Request body for POST /api/auth/refresh-token.
- */
-export interface RefreshTokenBody {
-  refreshToken: string;
-}
+/** Inferred from refreshTokenSchema */
+export type RefreshTokenBody = z.infer<typeof refreshTokenSchema>;
 
 /**
  * Extended Express Request with authenticated user data.

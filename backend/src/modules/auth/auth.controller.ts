@@ -2,7 +2,7 @@
  * Auth Module — Controller (Route Handlers)
  *
  * Thin controller layer that handles HTTP request/response concerns:
- * - Extracts and validates input from the request
+ * - Validates input using Zod schemas via safeParse
  * - Delegates business logic to the auth service
  * - Maps service results/errors to appropriate HTTP responses
  *
@@ -20,15 +20,19 @@ import {
   getUserProfile,
 } from "./auth.service.js";
 import {
-  validateRegisterInput,
-  validateLoginInput,
+  registerSchema,
+  loginSchema,
+  refreshTokenSchema,
 } from "./auth.validation.js";
-import {
-  RegisterBody,
-  LoginBody,
-  RefreshTokenBody,
-  AuthenticatedRequest,
-} from "./auth.types.js";
+import { AuthenticatedRequest } from "./auth.types.js";
+
+/**
+ * Extract a flat string[] of human-readable messages from a Zod error.
+ * Keeps the existing 400 response shape: { errors: string[] }
+ */
+function formatZodErrors(error: import("zod").ZodError): string[] {
+  return error.issues.map((issue) => issue.message);
+}
 
 /**
  * POST /api/auth/register
@@ -43,17 +47,14 @@ import {
  */
 export async function register(req: Request, res: Response): Promise<void> {
   try {
-    const body = req.body as RegisterBody;
-
-    // Validate all registration fields before processing
-    const validation = validateRegisterInput(body);
-    if (!validation.valid) {
-      res.status(400).json({ errors: validation.errors });
+    const result = registerSchema.safeParse(req.body);
+    if (!result.success) {
+      res.status(400).json({ errors: formatZodErrors(result.error) });
       return;
     }
 
-    const result = await registerUser(body);
-    res.status(201).json(result);
+    const data = await registerUser(result.data);
+    res.status(201).json(data);
   } catch (error: any) {
     const status = error.status || 500;
     const message = error.message || "Internal server error";
@@ -105,17 +106,14 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
  */
 export async function login(req: Request, res: Response): Promise<void> {
   try {
-    const body = req.body as LoginBody;
-
-    // Validate login fields
-    const validation = validateLoginInput(body);
-    if (!validation.valid) {
-      res.status(400).json({ errors: validation.errors });
+    const result = loginSchema.safeParse(req.body);
+    if (!result.success) {
+      res.status(400).json({ errors: formatZodErrors(result.error) });
       return;
     }
 
-    const result = await loginUser(body);
-    res.status(200).json(result);
+    const data = await loginUser(result.data);
+    res.status(200).json(data);
   } catch (error: any) {
     const status = error.status || 500;
     const message = error.message || "Internal server error";
@@ -131,17 +129,18 @@ export async function login(req: Request, res: Response): Promise<void> {
  *
  * Request body: RefreshTokenBody (refreshToken)
  * Response 200: { accessToken, refreshToken }
- * Response 400: { error } — missing token
+ * Response 400: { errors: string[] } — missing / invalid token
  * Response 401: { error } — invalid or expired token
  */
 export async function refreshToken(req: Request, res: Response): Promise<void> {
   try {
-    const { refreshToken: token } = req.body as RefreshTokenBody;
-
-    if (!token) {
-      res.status(400).json({ error: "Refresh token is required" });
+    const result = refreshTokenSchema.safeParse(req.body);
+    if (!result.success) {
+      res.status(400).json({ errors: formatZodErrors(result.error) });
       return;
     }
+
+    const { refreshToken: token } = result.data;
 
     // First verify the JWT signature and expiry before checking the DB
     try {
@@ -152,8 +151,8 @@ export async function refreshToken(req: Request, res: Response): Promise<void> {
     }
 
     // Token is a valid JWT — now check it matches a user in the database
-    const result = await refreshUserToken(token);
-    res.status(200).json(result);
+    const data = await refreshUserToken(token);
+    res.status(200).json(data);
   } catch (error: any) {
     const status = error.status || 500;
     const message = error.message || "Internal server error";

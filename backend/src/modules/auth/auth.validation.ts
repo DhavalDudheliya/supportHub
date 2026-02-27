@@ -1,103 +1,72 @@
 /**
- * Auth Module — Input Validation
+ * Auth Module — Zod Validation Schemas
  *
- * Validates request payloads for the register and login endpoints.
- * Returns structured error arrays so the controller can send
- * all validation errors in a single 400 response.
+ * Declarative validation for auth endpoints using Zod.
+ * Types are inferred from these schemas in auth.types.ts,
+ * keeping validation rules and TypeScript types in sync.
  */
 
-import { RegisterBody, LoginBody } from "./auth.types.js";
-
-/** Result of a validation check */
-interface ValidationResult {
-  valid: boolean; // True if all checks passed
-  errors: string[]; // Human-readable error messages (empty if valid)
-}
+import { z } from "zod";
 
 /**
- * Validate the registration request body.
+ * POST /api/auth/register
  *
- * Checks:
- * - email: required, valid format (basic regex)
- * - firstName: required, min 2 characters
- * - lastName: required, min 2 characters
- * - phone: required
- * - companyName: required, min 2 characters
- * - password: required, min 8 characters
- *
- * @param body - The raw request body
- * @returns ValidationResult with `valid` flag and any error messages
+ * Rules:
+ * - email:       valid email format
+ * - firstName:   at least 2 characters (after trim)
+ * - lastName:    at least 2 characters (after trim)
+ * - phone:      required, non-empty
+ * - companyName: at least 2 characters (after trim)
+ * - password:    at least 8 characters
  */
-export function validateRegisterInput(body: RegisterBody): ValidationResult {
-  const errors: string[] = [];
-
-  // Email validation
-  if (!body.email || typeof body.email !== "string") {
-    errors.push("Email is required");
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
-    errors.push("Invalid email format");
-  }
-
-  // First name validation
-  if (!body.firstName || typeof body.firstName !== "string") {
-    errors.push("First name is required");
-  } else if (body.firstName.trim().length < 2) {
-    errors.push("First name must be at least 2 characters");
-  }
-
-  // Last name validation
-  if (!body.lastName || typeof body.lastName !== "string") {
-    errors.push("Last name is required");
-  } else if (body.lastName.trim().length < 2) {
-    errors.push("Last name must be at least 2 characters");
-  }
-
-  // Phone validation
-  if (!body.phone || typeof body.phone !== "string") {
-    errors.push("Phone number is required");
-  }
-
-  // Company name validation
-  if (!body.companyName || typeof body.companyName !== "string") {
-    errors.push("Company name is required");
-  } else if (body.companyName.trim().length < 2) {
-    errors.push("Company name must be at least 2 characters");
-  }
-
-  // Password validation
-  if (!body.password || typeof body.password !== "string") {
-    errors.push("Password is required");
-  } else if (body.password.length < 8) {
-    errors.push("Password must be at least 8 characters");
-  }
-
-  return { valid: errors.length === 0, errors };
-}
+export const registerSchema = z.object({
+  email: z
+    .string({ message: "Email is required" })
+    .email("Invalid email format"),
+  firstName: z
+    .string({ message: "First name is required" })
+    .trim()
+    .min(2, "First name must be at least 2 characters"),
+  lastName: z
+    .string({ message: "Last name is required" })
+    .trim()
+    .min(2, "Last name must be at least 2 characters"),
+  phone: z
+    .string({ message: "Phone number is required" })
+    .min(1, "Phone number is required"),
+  companyName: z
+    .string({ message: "Company name is required" })
+    .trim()
+    .min(2, "Company name must be at least 2 characters"),
+  password: z
+    .string({ message: "Password is required" })
+    .min(8, "Password must be at least 8 characters"),
+});
 
 /**
- * Validate the login request body.
+ * POST /api/auth/login
  *
- * Checks:
- * - email: required, valid format
+ * Rules:
+ * - email:    valid email format
  * - password: required
- *
- * @param body - The raw request body
- * @returns ValidationResult with `valid` flag and any error messages
  */
-export function validateLoginInput(body: LoginBody): ValidationResult {
-  const errors: string[] = [];
+export const loginSchema = z.object({
+  email: z
+    .string({ message: "Email is required" })
+    .email("Invalid email format"),
+  password: z
+    .string({ message: "Password is required" })
+    .min(1, "Password is required"),
+});
 
-  // Email validation
-  if (!body.email || typeof body.email !== "string") {
-    errors.push("Email is required");
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
-    errors.push("Invalid email format");
-  }
-
-  // Password validation
-  if (!body.password || typeof body.password !== "string") {
-    errors.push("Password is required");
-  }
-
-  return { valid: errors.length === 0, errors };
-}
+/**
+ * POST /api/auth/refresh-token
+ *
+ * Rules:
+ * - refreshToken: required non-empty string
+ */
+export const refreshTokenSchema = z.object({
+  refreshToken: z
+    .string({ message: "Refresh token is required" })
+    .min(1, "Refresh token is required"),
+});
