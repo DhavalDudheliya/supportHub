@@ -1,0 +1,56 @@
+/**
+ * Prisma Schema for SupportHub CRM
+ *
+ * Defines the core data models for the authentication and multi-tenant system.
+ * - User: Stores user credentials, profile, and email verification state
+ * - Domain: Represents a tenant workspace (one per company registration)
+ * - Role: Enum for role-based access control (ADMIN / AGENT)
+ */
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Registered user of the platform.
+/// Each user belongs to exactly one Domain (tenant workspace).
+model User {
+  id                 String    @id @default(uuid())  /// Primary key — UUID for multi-tenant safety
+  email              String    @unique               /// Login identifier — must be globally unique
+  firstName          String                          /// User's first name
+  lastName           String                          /// User's last name
+  phone              String                          /// Contact phone number
+  passwordHash       String                          /// bcrypt-hashed password — never store plain text
+  isEmailVerified    Boolean   @default(false)       /// Flipped to true after clicking the verification link
+  emailVerifyToken   String?   @unique               /// One-time token sent in the verification email
+  emailVerifyExpires DateTime?                       /// Token expiry — 24 hours from registration
+  refreshToken       String?                         /// Current refresh token for token rotation
+  role               Role      @default(ADMIN)       /// ADMIN for the registering user; AGENT for invitees
+  domainId           String                          /// FK to the tenant workspace
+  domain             Domain    @relation(fields: [domainId], references: [id])
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+/// Tenant workspace created during registration.
+/// The slug is derived from the company name and used for tenant routing.
+model Domain {
+  id        String   @id @default(uuid())  /// Primary key — UUID
+  subdomain String   @unique               /// URL-safe subdomain identifier, e.g. "acmecorp"
+  company   String                         /// Original company name provided at registration
+  users     User[]                         /// All users belonging to this workspace
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Role-based access control enum.
+/// ADMIN — Full access (assigned to the user who registers the workspace)
+/// AGENT — Limited access (assigned to users invited later)
+enum Role {
+  ADMIN
+  AGENT
+}
