@@ -8,18 +8,18 @@ export default function TenantLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-background">
       {/* Left side - Branded Area (Placeholder, can be customized per tenant later) */}
-      <div className="relative hidden flex-col items-center justify-center bg-gray-900 p-12 text-white lg:flex lg:w-1/2">
+      <div className="relative hidden flex-col items-center justify-center bg-zinc-950 p-12 text-zinc-50 lg:flex lg:w-1/2">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -inset-[10px] opacity-20">
-            <div className="h-full w-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-500 via-gray-900 to-gray-900 blur-2xl"></div>
+            <div className="h-full w-full bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-primary/30 via-zinc-950 to-zinc-950 blur-2xl"></div>
           </div>
         </div>
 
         <div className="relative z-10 max-w-lg text-center">
           <h2 className="mb-4 text-4xl font-bold">Welcome to your Workspace</h2>
-          <p className="text-lg text-gray-400">
+          <p className="text-lg text-zinc-400">
             Sign in to access your dashboard, support tickets, and team
             collaboration tools.
           </p>

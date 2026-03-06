@@ -9,6 +9,15 @@ import { AlertCircle, CheckCircle2, Loader2, Lock, Mail } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@supporthub/ui/components/alert";
+import { Button } from "@supporthub/ui/components/button";
+import { Input } from "@supporthub/ui/components/input";
+import { Label } from "@supporthub/ui/components/label";
+
 import { useAuth } from "@/lib/auth-context";
 import { authService } from "@/lib/services/auth.service";
 import { loginSchema } from "@/lib/validations/auth.schema";
@@ -86,139 +95,101 @@ export default function LoginForm() {
   return (
     <div className="w-full">
       <div className="mb-8 text-center sm:text-left">
-        <h2 className="mb-2 text-3xl font-bold tracking-tight text-gray-900">
+        <h2 className="mb-2 text-3xl font-bold tracking-tight text-foreground">
           Sign in to {workspaceName}
         </h2>
-        <p className="text-lg text-gray-600">
+        <p className="text-lg text-muted-foreground">
           Welcome back! Please enter your details.
         </p>
       </div>
 
       {isVerified && (
-        <div className="animate-in fade-in mb-6 rounded-md border border-green-200 bg-green-50 p-4 duration-300">
-          <div className="flex">
-            <div className="shrink-0">
-              <CheckCircle2
-                className="h-5 w-5 text-green-500"
-                aria-hidden="true"
-              />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-green-800">
-                Email verified!
-              </h3>
-              <div className="mt-2 text-sm text-green-700">
-                <p>
-                  Your email has been successfully verified. You can now sign
-                  in.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Alert className="mb-6 border-green-200 bg-green-50 text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300">
+          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <AlertTitle>Email verified!</AlertTitle>
+          <AlertDescription className="text-green-700 dark:text-green-400/80">
+            Your email has been successfully verified. You can now sign in.
+          </AlertDescription>
+        </Alert>
       )}
 
       {apiError && (
-        <div className="animate-in fade-in mb-6 rounded-md border border-red-200 bg-red-50 p-4 duration-300">
-          <div className="flex">
-            <div className="shrink-0">
-              <AlertCircle
-                className="h-5 w-5 text-red-500"
-                aria-hidden="true"
-              />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">
-                Sign in failed
-              </h3>
-              <div className="mt-2 text-sm text-red-700">
-                <p>{apiError}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Sign in failed</AlertTitle>
+          <AlertDescription>{apiError}</AlertDescription>
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div>
-          <label
-            htmlFor="email"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Email
-          </label>
-          <div className="relative mt-1 rounded-md shadow-sm">
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
+          <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Mail className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              <Mail
+                className="h-4 w-4 text-muted-foreground"
+                aria-hidden="true"
+              />
             </div>
-            <input
+            <Input
               id="email"
               type="email"
               autoComplete="email"
               required
-              className={`block w-full rounded-md border ${
-                errors.email
-                  ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-                  : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-              } py-3 pr-3 pl-10 shadow-sm focus:ring-1 focus:outline-none sm:text-sm`}
+              aria-invalid={!!errors.email}
+              className="h-10 pl-9"
               placeholder="you@company.com"
               {...register("email")}
             />
           </div>
           {errors.email && (
-            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+            <p className="text-sm text-destructive">{errors.email.message}</p>
           )}
         </div>
 
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            <a
+              href="#"
+              className="text-sm font-semibold text-primary hover:text-primary/80"
             >
-              Password
-            </label>
-            <div className="text-sm">
-              <a
-                href="#"
-                className="font-semibold text-indigo-600 hover:text-indigo-500"
-              >
-                Forgot password?
-              </a>
-            </div>
+              Forgot password?
+            </a>
           </div>
-          <div className="relative mt-1 rounded-md shadow-sm">
+          <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Lock className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              <Lock
+                className="h-4 w-4 text-muted-foreground"
+                aria-hidden="true"
+              />
             </div>
-            <input
+            <Input
               id="password"
               type="password"
               autoComplete="current-password"
               required
-              className={`block w-full rounded-md border ${
-                errors.password
-                  ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-                  : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-              } py-3 pr-3 pl-10 shadow-sm focus:ring-1 focus:outline-none sm:text-sm`}
+              aria-invalid={!!errors.password}
+              className="h-10 pl-9"
               placeholder="••••••••"
               {...register("password")}
             />
           </div>
           {errors.password && (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="text-sm text-destructive">
               {errors.password.message}
             </p>
           )}
         </div>
 
-        <button
+        <Button
           type="submit"
           disabled={isLoading}
-          className="text-md flex w-full items-center justify-center gap-2 rounded-md border border-transparent bg-indigo-600 px-4 py-3 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
+          className="h-10 w-full text-base"
         >
-          {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign In"}
-        </button>
+          {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+          Sign In
+        </Button>
       </form>
     </div>
   );

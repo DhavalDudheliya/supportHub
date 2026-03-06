@@ -16,14 +16,14 @@ const steps = [
 
 export default function StepIndicator({ currentStep }: StepIndicatorProps) {
   return (
-    <div className="mb-8">
-      <h2 className="mb-6 text-2xl font-bold text-gray-900">
+    <div className="mb-6">
+      <h2 className="mb-8 text-center text-3xl font-bold tracking-tight text-foreground">
         Create your account
       </h2>
 
-      <div className="relative flex justify-between">
+      <div className="relative flex justify-between px-2">
         <div
-          className="absolute top-1/2 left-0 -mt-px h-0.5 w-full bg-gray-200"
+          className="absolute top-1/2 left-2 right-2 -mt-px h-0.5 bg-border"
           aria-hidden="true"
         />
 
@@ -35,10 +35,10 @@ export default function StepIndicator({ currentStep }: StepIndicatorProps) {
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors duration-200 ${
                 currentStep > step.id
-                  ? "bg-indigo-600 text-white"
+                  ? "bg-primary text-primary-foreground"
                   : currentStep === step.id
-                    ? "border-2 border-indigo-600 bg-white text-indigo-600"
-                    : "border-2 border-gray-300 bg-white text-gray-500"
+                    ? "border-2 border-primary bg-background text-primary"
+                    : "border-2 border-muted-foreground/30 bg-background text-muted-foreground"
               }`}
             >
               {currentStep > step.id ? (
@@ -47,7 +47,7 @@ export default function StepIndicator({ currentStep }: StepIndicatorProps) {
                 <span className="text-sm font-semibold">{step.id}</span>
               )}
             </div>
-            <div className="absolute top-8 mt-2 text-xs font-medium whitespace-nowrap text-gray-500">
+            <div className="absolute top-8 mt-2 text-xs font-medium whitespace-nowrap text-muted-foreground">
               {step.name}
             </div>
           </div>
