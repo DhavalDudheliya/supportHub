@@ -12,12 +12,21 @@ interface RegistrationSuccessProps {
   subdomain: string | null;
 }
 
+/**
+ * RegistrationSuccess - Step 3 of the registration flow.
+ *
+ * Displays after a successful registration with:
+ * - The user's email (for verification prompt)
+ * - The newly created workspace URL
+ * - Actions to navigate to login or resend verification email
+ */
 export default function RegistrationSuccess({
   email,
   subdomain,
 }: RegistrationSuccessProps) {
   const router = useRouter();
 
+  /** Redirect to the tenant login page — uses full redirect for cross-subdomain navigation */
   const goBackToLogin = () => {
     if (subdomain) {
       const protocol = process.env.NODE_ENV === "production" ? "https" : "http";

@@ -14,8 +14,18 @@ import {
   AlertTitle,
 } from "@supporthub/ui/components/alert";
 import { Button } from "@supporthub/ui/components/button";
-import { Input } from "@supporthub/ui/components/input";
-import { Label } from "@supporthub/ui/components/label";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@supporthub/ui/components/field";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@supporthub/ui/components/input-group";
 
 import { authService } from "@/lib/services/auth.service";
 import { lookupDomainSchema } from "@/lib/validations/auth.schema";
@@ -24,6 +34,14 @@ type LookupValues = {
   email: string;
 };
 
+/**
+ * FindWorkspaceForm - Entry point for existing users.
+ *
+ * Looks up the user's email to find their tenant subdomain,
+ * then redirects to the tenant-specific login page.
+ * Uses window.location.href (not Next.js router) because the
+ * redirect changes the hostname (e.g. app.com -> acme.app.com).
+ */
 export default function FindWorkspaceForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -48,9 +66,7 @@ export default function FindWorkspaceForm() {
         process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost:3000";
       const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
 
-      // Redirect to the tenant-specific login page
-      // We use window.location.href because we are changing the actual hostname
-      // Next.js router.push() only works within the same origin
+      // Full page redirect — crosses subdomain boundary, can't use Next.js router
       window.location.href = `${protocol}://${subdomain}.${rootDomain}/login`;
     } catch (error: unknown) {
       console.error("Lookup error:", error);
@@ -65,7 +81,7 @@ export default function FindWorkspaceForm() {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-8 text-center sm:text-left">
         <h2 className="mb-2 text-3xl font-bold tracking-tight text-foreground">
           Find your workspace
@@ -83,40 +99,38 @@ export default function FindWorkspaceForm() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Work email address</Label>
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Search
-                className="h-4 w-4 text-muted-foreground"
-                aria-hidden="true"
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="email">Work email address</FieldLabel>
+            <InputGroup className="h-10">
+              <InputGroupAddon>
+                <InputGroupText>
+                  <Search aria-hidden="true" />
+                </InputGroupText>
+              </InputGroupAddon>
+              <InputGroupInput
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                aria-invalid={!!errors.email}
+                placeholder="you@company.com"
+                {...register("email")}
               />
-            </div>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              aria-invalid={!!errors.email}
-              className="h-10 pl-9"
-              placeholder="you@company.com"
-              {...register("email")}
-            />
-          </div>
-          {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message}</p>
-          )}
-        </div>
+            </InputGroup>
+            <FieldError errors={[errors.email]} />
+          </Field>
 
-        <Button
-          type="submit"
-          disabled={isLoading}
-          className="h-10 w-full text-base"
-        >
-          {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-          Continue
-        </Button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="h-10 w-full text-base"
+          >
+            {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+            Continue
+          </Button>
+        </FieldGroup>
       </form>
 
       <div className="mt-8 border-t border-border pt-6">

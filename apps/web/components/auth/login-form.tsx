@@ -5,7 +5,15 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, CheckCircle2, Loader2, Lock, Mail } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Loader2,
+  Lock,
+  Mail,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -15,8 +23,19 @@ import {
   AlertTitle,
 } from "@supporthub/ui/components/alert";
 import { Button } from "@supporthub/ui/components/button";
-import { Input } from "@supporthub/ui/components/input";
-import { Label } from "@supporthub/ui/components/label";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@supporthub/ui/components/field";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  InputGroupText,
+} from "@supporthub/ui/components/input-group";
 
 import { useAuth } from "@/lib/auth-context";
 import { authService } from "@/lib/services/auth.service";
@@ -27,9 +46,17 @@ type LoginValues = {
   password: string;
 };
 
+/**
+ * LoginForm - Tenant-scoped login form.
+ *
+ * Displayed on tenant subdomains (e.g. acme.supporthub.com/login).
+ * Derives the workspace name from the subdomain for display.
+ * Shows a verification success banner when redirected from email verification.
+ */
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [workspaceName, setWorkspaceName] = useState<string>("Your Workspace");
 
   const router = useRouter();
@@ -38,14 +65,15 @@ export default function LoginForm() {
   const subdomain = searchParams.get("subdomain");
   const { refreshUser } = useAuth();
 
+  // Derive a human-readable workspace name from the subdomain.
+  // Priority: searchParam > hostname extraction > fallback ("Your Workspace")
   useEffect(() => {
-    // Attempt to format the subdomain into a readable workspace name
-    // e.g., "acmecorp" -> "Acmecorp", or if they are on a real domain, extract it
     if (subdomain) {
       const formatted = subdomain.charAt(0).toUpperCase() + subdomain.slice(1);
       setWorkspaceName(formatted);
     } else if (typeof window !== "undefined") {
-      // Fallback if subdomain searchParam isn't working as expected
+      // Fallback: extract subdomain from the current hostname
+      // e.g. "acme.localhost:3000" -> "Acme"
       const host = window.location.hostname;
       const parts = host.split(".");
       if (
@@ -74,7 +102,7 @@ export default function LoginForm() {
 
     try {
       await authService.loginUser(data);
-      // Wait for auth context to hydrate with the new user data
+      // Refresh auth context so protected routes recognize the new session
       await refreshUser();
 
       toast.success("Signed in successfully");
@@ -93,7 +121,7 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-8 text-center sm:text-left">
         <h2 className="mb-2 text-3xl font-bold tracking-tight text-foreground">
           Sign in to {workspaceName}
@@ -121,75 +149,81 @@ export default function LoginForm() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Mail
-                className="h-4 w-4 text-muted-foreground"
-                aria-hidden="true"
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <InputGroup className="h-10">
+              <InputGroupAddon>
+                <InputGroupText>
+                  <Mail aria-hidden="true" />
+                </InputGroupText>
+              </InputGroupAddon>
+              <InputGroupInput
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                aria-invalid={!!errors.email}
+                placeholder="you@company.com"
+                {...register("email")}
               />
-            </div>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              aria-invalid={!!errors.email}
-              className="h-10 pl-9"
-              placeholder="you@company.com"
-              {...register("email")}
-            />
-          </div>
-          {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message}</p>
-          )}
-        </div>
+            </InputGroup>
+            <FieldError errors={[errors.email]} />
+          </Field>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <a
-              href="#"
-              className="text-sm font-semibold text-primary hover:text-primary/80"
-            >
-              Forgot password?
-            </a>
-          </div>
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Lock
-                className="h-4 w-4 text-muted-foreground"
-                aria-hidden="true"
+          <Field>
+            <div className="flex items-center justify-between">
+              <FieldLabel htmlFor="password">Password</FieldLabel>
+              <a
+                href="#"
+                className="text-sm font-semibold text-primary hover:text-primary/80"
+              >
+                Forgot password?
+              </a>
+            </div>
+            <InputGroup className="h-10">
+              <InputGroupAddon>
+                <InputGroupText>
+                  <Lock aria-hidden="true" />
+                </InputGroupText>
+              </InputGroupAddon>
+              <InputGroupInput
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                required
+                aria-invalid={!!errors.password}
+                placeholder="••••••••"
+                {...register("password")}
               />
-            </div>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              aria-invalid={!!errors.password}
-              className="h-10 pl-9"
-              placeholder="••••••••"
-              {...register("password")}
-            />
-          </div>
-          {errors.password && (
-            <p className="text-sm text-destructive">
-              {errors.password.message}
-            </p>
-          )}
-        </div>
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
+            <FieldError errors={[errors.password]} />
+          </Field>
 
-        <Button
-          type="submit"
-          disabled={isLoading}
-          className="h-10 w-full text-base"
-        >
-          {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-          Sign In
-        </Button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="h-10 w-full text-base"
+          >
+            {isLoading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+            Sign In
+          </Button>
+        </FieldGroup>
       </form>
     </div>
   );

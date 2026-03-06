@@ -8,12 +8,17 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@supporthub/ui/components/button";
 import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@supporthub/ui/components/field";
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
 } from "@supporthub/ui/components/input-group";
-import { Label } from "@supporthub/ui/components/label";
 
 import { personalInfoSchema } from "@/lib/validations/auth.schema";
 
@@ -29,6 +34,12 @@ interface PersonalInfoStepProps {
   onSubmit: (data: PersonalInfoValues) => void;
 }
 
+/**
+ * PersonalInfoStep - Step 1 of the registration flow.
+ *
+ * Collects the user's name, email, and optional phone number.
+ * Data is validated client-side via Zod before advancing to Step 2.
+ */
 export default function PersonalInfoStep({
   defaultValues,
   onSubmit,
@@ -39,111 +50,102 @@ export default function PersonalInfoStep({
     formState: { errors },
   } = useForm<PersonalInfoValues>({
     resolver: zodResolver(personalInfoSchema),
+    // Pre-populate fields when navigating back from Step 2
     defaultValues: defaultValues || {},
   });
 
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="animate-in fade-in slide-in-from-bottom-4 space-y-6 duration-500"
+      className="animate-in fade-in slide-in-from-bottom-4 duration-500"
     >
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="firstName">
-            First name <span className="text-destructive">*</span>
-          </Label>
+      <FieldGroup>
+        <div className="grid grid-cols-2 gap-4">
+          <Field>
+            <FieldLabel htmlFor="firstName">
+              First name <span className="text-destructive">*</span>
+            </FieldLabel>
+            <InputGroup className="h-10">
+              <InputGroupAddon>
+                <InputGroupText>
+                  <User aria-hidden="true" />
+                </InputGroupText>
+              </InputGroupAddon>
+              <InputGroupInput
+                id="firstName"
+                type="text"
+                autoComplete="given-name"
+                aria-invalid={!!errors.firstName}
+                placeholder="John"
+                {...register("firstName")}
+              />
+            </InputGroup>
+            <FieldError errors={[errors.firstName]} />
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="lastName">
+              Last name <span className="text-destructive">*</span>
+            </FieldLabel>
+            <InputGroup className="h-10">
+              <InputGroupAddon>
+                <InputGroupText>
+                  <User aria-hidden="true" />
+                </InputGroupText>
+              </InputGroupAddon>
+              <InputGroupInput
+                id="lastName"
+                type="text"
+                autoComplete="family-name"
+                aria-invalid={!!errors.lastName}
+                placeholder="Doe"
+                {...register("lastName")}
+              />
+            </InputGroup>
+            <FieldError errors={[errors.lastName]} />
+          </Field>
+        </div>
+
+        <Field>
+          <FieldLabel htmlFor="email">
+            Work email address <span className="text-destructive">*</span>
+          </FieldLabel>
           <InputGroup className="h-10">
             <InputGroupAddon>
               <InputGroupText>
-                <User aria-hidden="true" />
+                <Mail aria-hidden="true" />
               </InputGroupText>
             </InputGroupAddon>
             <InputGroupInput
-              id="firstName"
-              type="text"
-              autoComplete="given-name"
-              aria-invalid={!!errors.firstName}
-              {...register("firstName")}
+              id="email"
+              type="email"
+              autoComplete="email"
+              aria-invalid={!!errors.email}
+              placeholder="you@company.com"
+              {...register("email")}
             />
           </InputGroup>
-          {errors.firstName && (
-            <p className="text-xs text-destructive animate-in slide-in-from-top-1">
-              {errors.firstName.message}
-            </p>
-          )}
-        </div>
+          <FieldError errors={[errors.email]} />
+        </Field>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="lastName">
-            Last name <span className="text-destructive">*</span>
-          </Label>
+        <Field>
+          <FieldLabel htmlFor="phone">Phone number (optional)</FieldLabel>
           <InputGroup className="h-10">
             <InputGroupAddon>
               <InputGroupText>
-                <User aria-hidden="true" />
+                <Phone aria-hidden="true" />
               </InputGroupText>
             </InputGroupAddon>
             <InputGroupInput
-              id="lastName"
-              type="text"
-              autoComplete="family-name"
-              aria-invalid={!!errors.lastName}
-              {...register("lastName")}
+              id="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="+1 (555) 000-0000"
+              {...register("phone")}
             />
           </InputGroup>
-          {errors.lastName && (
-            <p className="text-xs text-destructive animate-in slide-in-from-top-1">
-              {errors.lastName.message}
-            </p>
-          )}
-        </div>
-      </div>
+        </Field>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="email">
-          Work email address <span className="text-destructive">*</span>
-        </Label>
-        <InputGroup className="h-10">
-          <InputGroupAddon>
-            <InputGroupText>
-              <Mail aria-hidden="true" />
-            </InputGroupText>
-          </InputGroupAddon>
-          <InputGroupInput
-            id="email"
-            type="email"
-            autoComplete="email"
-            aria-invalid={!!errors.email}
-            placeholder="you@company.com"
-            {...register("email")}
-          />
-        </InputGroup>
-        {errors.email && (
-          <p className="text-xs text-destructive animate-in slide-in-from-top-1">
-            {errors.email.message}
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="phone">Phone number (optional)</Label>
-        <InputGroup className="h-10">
-          <InputGroupAddon>
-            <InputGroupText>
-              <Phone aria-hidden="true" />
-            </InputGroupText>
-          </InputGroupAddon>
-          <InputGroupInput
-            id="phone"
-            type="tel"
-            autoComplete="tel"
-            placeholder="+1 (555) 000-0000"
-            {...register("phone")}
-          />
-        </InputGroup>
-      </div>
-
-      <div>
         <Button
           type="submit"
           className="group h-10 w-full text-base transition-all"
@@ -151,17 +153,17 @@ export default function PersonalInfoStep({
           Continue
           <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
         </Button>
-      </div>
 
-      <div className="text-center text-sm text-muted-foreground">
-        <span>Already have an account? </span>
-        <Link
-          href="/login"
-          className="font-medium text-primary hover:text-primary/80 hover:underline underline-offset-4 transition-all"
-        >
-          Sign in
-        </Link>
-      </div>
+        <div className="text-center text-sm text-muted-foreground">
+          <span>Already have an account? </span>
+          <Link
+            href="/login"
+            className="font-medium text-primary hover:text-primary/80 hover:underline underline-offset-4 transition-all"
+          >
+            Sign in
+          </Link>
+        </div>
+      </FieldGroup>
     </form>
   );
 }
