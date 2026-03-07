@@ -9,9 +9,9 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-background p-3">
+    <div className="flex min-h-screen bg-background">
       {/* Left side - Branding (Hidden on mobile) */}
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-primary p-12 text-primary-foreground lg:flex lg:w-1/2 rounded-xl">
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-primary p-12 text-primary-foreground lg:flex lg:w-1/2">
         {/* Decorative background pattern */}
         <div className="absolute inset-0 opacity-10">
           <svg

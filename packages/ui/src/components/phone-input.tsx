@@ -113,25 +113,27 @@ const CountrySelect = ({
         }
       }}
     >
-      <PopoverTrigger>
-        <Button
-          type="button"
-          variant="outline"
-          className="flex gap-1 rounded-e-none rounded-s-lg border-r-0 px-3 focus:z-10"
-          disabled={disabled}
-        >
-          <FlagComponent
-            country={selectedCountry}
-            countryName={selectedCountry}
-          />
-          <ChevronsUpDown
-            className={cn(
-              "-mr-2 size-4 opacity-50",
-              disabled ? "hidden" : "opacity-100",
-            )}
-          />
-        </Button>
-      </PopoverTrigger>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            className="flex gap-1 rounded-e-none rounded-s-lg border-r-0 px-3 focus:z-10"
+            disabled={disabled}
+          >
+            <FlagComponent
+              country={selectedCountry}
+              countryName={selectedCountry}
+            />
+            <ChevronsUpDown
+              className={cn(
+                "-mr-2 size-4 opacity-50",
+                disabled ? "hidden" : "opacity-100",
+              )}
+            />
+          </Button>
+        }
+      />
       <PopoverContent className="w-[300px] p-0">
         <Command
           /* Use substring matching instead of cmdk's default fuzzy search */
