@@ -99,7 +99,7 @@ export default function FindWorkspaceForm() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="email">Work email address</FieldLabel>
@@ -113,7 +113,6 @@ export default function FindWorkspaceForm() {
                 id="email"
                 type="email"
                 autoComplete="email"
-                required
                 aria-invalid={!!errors.email}
                 placeholder="you@company.com"
                 {...register("email")}
