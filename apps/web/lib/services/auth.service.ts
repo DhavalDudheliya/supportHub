@@ -45,8 +45,12 @@ export const authService = {
   /**
    * Look up a workspace subdomain by user email
    */
-  async lookupWorkspace(email: string): Promise<{ subdomain: string }> {
-    const response = await api.post("/auth/lookup-workspace", { email });
+  async lookupWorkspace(
+    email: string,
+  ): Promise<{ subdomain: string } | { message: string }> {
+    const response = await api.post<
+      { subdomain: string } | { message: string }
+    >("/auth/lookup-workspace", { email });
     return response.data;
   },
 

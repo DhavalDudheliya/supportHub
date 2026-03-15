@@ -61,18 +61,24 @@ export default function FindWorkspaceForm() {
     try {
       const response = await authService.lookupWorkspace(data.email);
 
-      const subdomain = response.subdomain;
-      const rootDomain =
-        process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost:3000";
-      const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+      if ("subdomain" in response) {
+        const subdomain = response.subdomain;
+        const rootDomain =
+          process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost:3000";
+        const protocol =
+          process.env.NODE_ENV === "production" ? "https" : "http";
 
-      // Full page redirect — crosses subdomain boundary, can't use Next.js router
-      window.location.href = `${protocol}://${subdomain}.${rootDomain}/login`;
+        // Full page redirect — crosses subdomain boundary, can't use Next.js router
+        window.location.href = `${protocol}://${subdomain}.${rootDomain}/login`;
+      } else {
+        setApiError(response.message);
+      }
     } catch (error: unknown) {
       console.error("Lookup error:", error);
       const err = error as any;
       setApiError(
-        err.response?.data?.error ||
+        err.response?.data?.message ||
+          err.response?.data?.error ||
           "We couldn't find a workspace associated with that email address.",
       );
     } finally {

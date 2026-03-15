@@ -403,12 +403,8 @@ export async function lookupUserWorkspace(email: string) {
     include: { workspace: true },
   });
 
-  // Always return success even if user not found to prevent enumeration
   if (!user) {
-    return {
-      message:
-        "If an account is associated with this email, we have sent instructions to your inbox.",
-    };
+    return { message: "No workspace found for this email" };
   }
 
   return { subdomain: user.workspace.subdomain };

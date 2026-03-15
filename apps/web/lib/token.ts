@@ -17,7 +17,7 @@ export function getAccessToken(): string | null {
 
 export function setAccessToken(token: string): void {
   // Set cookie with secure defaults: SameSite=Lax, Secure (in production)
-  // Expires in 15 mins (matching token expiry usually, or session based)
+  // Expires in 1 day (matching token expiry usually, or session based)
   Cookies.set(ACCESS_TOKEN_KEY, token, {
     expires: 1, // 1 day for simplicity in dev, or omit for session cookie
     sameSite: "lax",
@@ -28,7 +28,12 @@ export function setAccessToken(token: string): void {
 }
 
 export function removeAccessToken(): void {
-  Cookies.remove(ACCESS_TOKEN_KEY, { path: "/" });
+  Cookies.remove(ACCESS_TOKEN_KEY, {
+    path: "/",
+    sameSite: "lax",
+    secure:
+      typeof window !== "undefined" && window.location.protocol === "https:",
+  });
 }
 
 // Refresh Token Management (localStorage)
