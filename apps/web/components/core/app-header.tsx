@@ -37,7 +37,7 @@ export default function AppHeader() {
   const fullName = user ? `${user.firstName} ${user.lastName}` : "Loading...";
 
   return (
-    <header className="flex h-14 items-center gap-4 border-b border-border bg-background px-6">
+    <header className="flex h-14 items-center gap-4 border-b border-border bg-background px-6 justify-between">
       {/* Search Bar */}
       <div className="relative flex-1 max-w-xl">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

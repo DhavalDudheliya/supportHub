@@ -108,7 +108,7 @@ export default function TicketsPage() {
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 border-r border-border bg-muted/30 p-4">
+      <aside className="w-60 shrink-0 border-r border-border bg-muted/30 p-4">
         <nav className="space-y-1">
           {views.map((view) => {
             const Icon = view.icon;
@@ -118,7 +118,7 @@ export default function TicketsPage() {
                 key={view.key}
                 onClick={() => handleViewChange(view.key)}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2,text-sm font-medium transition-colors",
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   isActive
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
