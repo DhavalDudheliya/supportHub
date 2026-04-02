@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const createTicketSchema = z.object({
-  subject: z.string().min(1, "Subject is required"),
-  description: z.string().min(1, "Description is required"),
+  subject: z.string().trim().min(1, "Subject is required"),
+  description: z.string().trim().min(1, "Description is required"),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
   customerId: z.string().uuid("Invalid customer ID"),
   assigneeId: z.string().uuid("Invalid assignee ID").optional(),
@@ -10,8 +10,8 @@ export const createTicketSchema = z.object({
 });
 
 export const updateTicketSchema = z.object({
-  subject: z.string().min(1).optional(),
-  description: z.string().min(1).optional(),
+  subject: z.string().trim().min(1).optional(),
+  description: z.string().trim().min(1).optional(),
   status: z.enum(["OPEN", "PENDING", "SOLVED", "CLOSED"]).optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
   assigneeId: z.string().uuid().nullable().optional(),
@@ -19,7 +19,7 @@ export const updateTicketSchema = z.object({
 });
 
 export const addCommentSchema = z.object({
-  body: z.string().min(1, "Comment body is required"),
+  body: z.string().trim().min(1, "Comment body is required"),
   isInternal: z.boolean().optional(),
 });
 

@@ -186,9 +186,11 @@ export async function deleteTicket(id: string, workspaceId: string) {
     throw { status: 404, message: "Ticket not found" };
   }
 
-  // Delete comments first (cascade), then the ticket
-  await prisma.ticketComment.deleteMany({ where: { ticketId: id } });
-  await prisma.ticket.delete({ where: { id } });
+  // Delete comments first (cascade), then the ticket in a transaction
+  await prisma.$transaction([
+    prisma.ticketComment.deleteMany({ where: { ticketId: id } }),
+    prisma.ticket.delete({ where: { id } }),
+  ]);
 
   return { message: "Ticket deleted successfully" };
 }

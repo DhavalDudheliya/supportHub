@@ -23,13 +23,18 @@ export function TicketPropertiesSidebar({
   ticket,
   onUpdateProperty,
 }: TicketPropertiesSidebarProps) {
-  const getInitials = (name: string) =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const getInitials = (name: string) => {
+    if (!name) return "?";
+    return (
+      name
+        .split(" ")
+        .filter(Boolean)
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2) || "?"
+    );
+  };
 
   return (
     <aside className="w-80 shrink-0 overflow-auto border-l border-border p-5 space-y-6">
@@ -107,11 +112,14 @@ export function TicketPropertiesSidebar({
                   <Avatar className="h-5 w-5">
                     <AvatarFallback className="text-[10px]">
                       {getInitials(
-                        `${ticket.assignee.firstName} ${ticket.assignee.lastName}`,
+                        `${ticket.assignee.firstName ?? ""} ${
+                          ticket.assignee.lastName ?? ""
+                        }`.trim() || "?",
                       )}
                     </AvatarFallback>
                   </Avatar>
-                  {ticket.assignee.firstName} {ticket.assignee.lastName}
+                  {ticket.assignee.firstName ?? ""}{" "}
+                  {ticket.assignee.lastName ?? ""}
                 </>
               ) : (
                 <span className="text-muted-foreground">Unassigned</span>

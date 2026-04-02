@@ -21,7 +21,11 @@ export function TicketConversation({ ticket }: TicketConversationProps) {
       {ticket.comments?.map((comment: TicketComment) => (
         <TicketCommentItem
           key={comment.id}
-          authorName={`${comment.author.firstName} ${comment.author.lastName}`}
+          authorName={
+            `${comment.author?.firstName ?? ""} ${
+              comment.author?.lastName ?? ""
+            }`.trim() || "Unknown"
+          }
           createdAt={comment.createdAt}
           body={comment.body}
           isInternal={comment.isInternal}

@@ -53,9 +53,17 @@ export async function exchangeGmailCode(code: string): Promise<{
   }
 
   // Get the user's email address
-  oauth2Client.setCredentials(tokens);
-  const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+  const userAuth = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+  );
+  userAuth.setCredentials(tokens);
+  const oauth2 = google.oauth2({ version: "v2", auth: userAuth });
   const { data: userInfo } = await oauth2.userinfo.get();
+
+  if (!userInfo.email) {
+    throw new Error("Failed to obtain user email from Google");
+  }
 
   const expiresAt = tokens.expiry_date
     ? new Date(tokens.expiry_date)
@@ -65,7 +73,7 @@ export async function exchangeGmailCode(code: string): Promise<{
     accessToken: tokens.access_token,
     refreshToken: tokens.refresh_token,
     expiresAt,
-    email: userInfo.email!,
+    email: userInfo.email,
   };
 }
 
@@ -296,16 +304,16 @@ export async function refreshGmailToken(refreshToken: string): Promise<{
   );
   auth.setCredentials({ refresh_token: refreshToken });
 
-  const { credentials } = await auth.refreshAccessToken();
+  const { token } = await auth.getAccessToken();
 
-  if (!credentials.access_token) {
+  if (!token) {
     throw new Error("Failed to refresh Gmail access token");
   }
 
   return {
-    accessToken: credentials.access_token,
-    expiresAt: credentials.expiry_date
-      ? new Date(credentials.expiry_date)
+    accessToken: token,
+    expiresAt: auth.credentials.expiry_date
+      ? new Date(auth.credentials.expiry_date)
       : new Date(Date.now() + 3600 * 1000),
   };
 }

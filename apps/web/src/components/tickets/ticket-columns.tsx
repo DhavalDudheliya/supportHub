@@ -3,6 +3,8 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { type Ticket } from "@/lib/services/ticket.service";
 import { Button } from "@supporthub/ui/components/button";
 import { Badge } from "@supporthub/ui/components/badge";
@@ -170,6 +172,7 @@ export const columns: ColumnDef<Ticket>[] = [
   {
     id: "actions",
     cell: ({ row }) => {
+      const router = useRouter();
       const ticket = row.original;
       return (
         <div onClick={(e) => e.stopPropagation()}>
@@ -181,13 +184,24 @@ export const columns: ColumnDef<Ticket>[] = [
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(ticket.id)}
+                onClick={async () => {
+                  await navigator.clipboard.writeText(ticket.id);
+                  toast.success("Ticket ID copied to clipboard");
+                }}
               >
                 Copy ticket ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>View ticket</DropdownMenuItem>
-              <DropdownMenuItem>View customer</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push(`/tickets/${ticket.id}`)}
+              >
+                View ticket
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => toast.info("Customer portal coming soon")}
+              >
+                View customer
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

@@ -41,6 +41,10 @@ export function initSocketIO(httpServer: HttpServer): Server {
       return next(new Error("Authentication token is required"));
     }
 
+    if (typeof token !== "string") {
+      return next(new Error("Invalid token format"));
+    }
+
     try {
       // Strip "Bearer " prefix if present
       const rawToken = token.startsWith("Bearer ") ? token.slice(7) : token;
@@ -105,5 +109,8 @@ export function emitTicketEvent(
 }
 
 export function getIO(): Server {
+  if (!io) {
+    throw new Error("Socket.IO not initialized. Call initSocketIO first.");
+  }
   return io;
 }

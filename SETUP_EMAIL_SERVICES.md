@@ -132,8 +132,11 @@ Copy the output → paste into `.env` as `ENCRYPTION_KEY`.
 For testing webhooks locally, you need a public URL that tunnels to localhost.
 
 ```bash
-# Install ngrok (if not already)
-npm install -g ngrok
+# Install ngrok (follow instructions at https://ngrok.com/download for your OS)
+# Examples:
+# macOS: brew install ngrok/ngrok/ngrok
+# Linux: curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list && sudo apt update && sudo apt install ngrok
+# Windows: choco install ngrok
 
 # Start tunnel
 ngrok http 5000

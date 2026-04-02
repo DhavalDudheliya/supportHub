@@ -18,13 +18,18 @@ export function TicketCommentItem({
   body,
   isInternal,
 }: TicketCommentItemProps) {
-  const getInitials = (name: string) =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const getInitials = (name: string) => {
+    if (!name) return "?";
+    return (
+      name
+        .split(" ")
+        .filter(Boolean)
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2) || "?"
+    );
+  };
 
   return (
     <div className="flex gap-3">

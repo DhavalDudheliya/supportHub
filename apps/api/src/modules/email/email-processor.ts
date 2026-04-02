@@ -131,26 +131,15 @@ async function findOrCreateCustomer(
   name: string,
   workspaceId: string,
 ) {
-  // Try to find existing customer in this workspace
-  const existing = await prisma.customer.findUnique({
+  const customer = await prisma.customer.upsert({
     where: { email_workspaceId: { email, workspaceId } },
-  });
-
-  if (existing) return existing;
-
-  // Create a new customer record
-  const customer = await prisma.customer.create({
-    data: {
+    update: {}, // No update needed if exists
+    create: {
       email,
       name: name || email.split("@")[0] || "Unknown",
       workspaceId,
     },
   });
-
-  logger.info(
-    { email, customerId: customer.id, workspaceId },
-    "New customer created from inbound email",
-  );
 
   return customer;
 }

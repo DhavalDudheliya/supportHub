@@ -60,9 +60,20 @@ export function CreateTicketDialog({ onSuccess }: { onSuccess: () => void }) {
   });
 
   useEffect(() => {
+    let cancelled = false;
     if (open) {
-      customerService.list(1, 100).then((res) => setCustomers(res.customers));
+      customerService
+        .list(1, 100)
+        .then((res) => {
+          if (!cancelled) setCustomers(res.customers);
+        })
+        .catch(() => {
+          if (!cancelled) toast.error("Failed to load customers");
+        });
     }
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   async function onSubmit(values: CreateTicketForm) {

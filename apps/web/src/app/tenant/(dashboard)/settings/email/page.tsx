@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Mail, Loader2, RefreshCw, Inbox } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,6 +22,7 @@ import {
 
 export default function EmailSettingsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [status, setStatus] = useState<EmailConnectionStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,10 +51,12 @@ export default function EmailSettingsPage() {
       toast.success("Gmail account connected successfully!", {
         description: "Incoming emails will now create support tickets.",
       });
+      router.replace("/settings/email");
     } else if (connected === "outlook") {
       toast.success("Outlook account connected successfully!", {
         description: "Incoming emails will now create support tickets.",
       });
+      router.replace("/settings/email");
     } else if (error) {
       const message = error.includes("gmail")
         ? "Failed to connect Gmail account"
@@ -61,8 +64,9 @@ export default function EmailSettingsPage() {
       toast.error(message, {
         description: "Please try again. Check the console for details.",
       });
+      router.replace("/settings/email");
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const connectedCount = [status?.gmail, status?.outlook].filter(
     Boolean,
