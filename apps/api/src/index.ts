@@ -7,20 +7,30 @@
  * - Lightweight API request logging via Pino
  * - Health check endpoints (/ and /api/health)
  * - All feature module routes via centralized routes.ts (/api/*)
+ * - Socket.IO for real-time WebSocket communication
+ * - BullMQ email worker for background email processing
+ * - Cron jobs for Gmail watch / Outlook subscription renewal
  *
  * Environment variables:
  * - PORT: Server port (default: 5000)
  */
 
+import http from "http";
 import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import "dotenv/config"; // Load .env variables into process.env
 
 import logger, { colors, statusColor } from "./lib/logger.js";
 import routes from "./routes.js";
+import { initSocketIO } from "./lib/socket.js";
+import { startEmailWorker } from "./workers/email.worker.js";
+import { startRenewalCron } from "./cron/renewal.cron.js";
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
+
+// Create HTTP server (needed for Socket.IO attachment)
+const server = http.createServer(app);
 
 // --- Global Middleware ---
 app.use(cors()); // Enable CORS for all origins
@@ -51,7 +61,16 @@ app.get("/api/health", (_req: Request, res: Response) => {
 // --- All Feature Module Routes (centralized in routes.ts) ---
 app.use("/api", routes);
 
+// --- Initialize Socket.IO ---
+initSocketIO(server);
+
+// --- Start Background Workers ---
+startEmailWorker();
+
+// --- Start Cron Jobs ---
+startRenewalCron();
+
 // --- Start Server ---
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   logger.info(`Server is running on http://localhost:${PORT}`);
 });

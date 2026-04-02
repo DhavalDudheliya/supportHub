@@ -17,6 +17,7 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import invitationRoutes from "./modules/invitation/invitation.routes.js";
 import customerRoutes from "./modules/customer/customer.routes.js";
 import ticketRoutes from "./modules/ticket/ticket.routes.js";
+import emailRoutes from "./modules/email/email.routes.js";
 
 const router: IRouter = Router();
 
@@ -25,5 +26,6 @@ router.use("/v1/auth", authRoutes);
 router.use("/v1/invitations", invitationRoutes);
 router.use("/v1/customers", customerRoutes);
 router.use("/v1/tickets", ticketRoutes);
+router.use("/v1/email", emailRoutes);
 
 export default router;

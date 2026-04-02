@@ -11,7 +11,7 @@ export const metadata: Metadata = {
  */
 export default function DashboardPage() {
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-6 p-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Dashboard

@@ -8,6 +8,7 @@ import {
   type ListTicketsParams,
 } from "@/lib/services/ticket.service";
 import { toast } from "sonner";
+import { useTicketRealtime } from "@/hooks/use-ticket-realtime";
 
 import {
   TicketSidebar,
@@ -23,6 +24,13 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Real-time: auto-refresh when new tickets/replies arrive via WebSocket
+  useTicketRealtime({
+    onNewTicket: () => fetchTickets(),
+    onTicketUpdated: () => fetchTickets(),
+    onTicketReply: () => fetchTickets(),
+  });
 
   const fetchTickets = useCallback(async () => {
     try {
