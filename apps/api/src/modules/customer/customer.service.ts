@@ -1,4 +1,5 @@
 import prisma from "../../lib/prisma.js";
+import { AppError } from "../../errors/index.js";
 import { CreateCustomerInput, UpdateCustomerInput } from "./customer.types.js";
 
 export async function createCustomer(
@@ -11,7 +12,7 @@ export async function createCustomer(
   });
 
   if (existing) {
-    throw { status: 400, message: "A customer with this email already exists" };
+    throw AppError.conflict("A customer with this email already exists");
   }
 
   return prisma.customer.create({
@@ -50,7 +51,7 @@ export async function getCustomer(id: string, workspaceId: string) {
   });
 
   if (!customer || customer.workspaceId !== workspaceId) {
-    throw { status: 404, message: "Customer not found" };
+    throw AppError.notFound("Customer not found");
   }
 
   return customer;
@@ -64,7 +65,7 @@ export async function updateCustomer(
   const customer = await prisma.customer.findUnique({ where: { id } });
 
   if (!customer || customer.workspaceId !== workspaceId) {
-    throw { status: 404, message: "Customer not found" };
+    throw AppError.notFound("Customer not found");
   }
 
   return prisma.customer.update({

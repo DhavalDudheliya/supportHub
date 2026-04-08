@@ -1,4 +1,5 @@
 import prisma from "../../lib/prisma.js";
+import { AppError } from "../../errors/index.js";
 import {
   CreateTicketInput,
   UpdateTicketInput,
@@ -129,7 +130,7 @@ export async function getTicket(id: string, workspaceId: string) {
   });
 
   if (!ticket || ticket.workspaceId !== workspaceId) {
-    throw { status: 404, message: "Ticket not found" };
+    throw AppError.notFound("Ticket not found");
   }
 
   return ticket;
@@ -143,7 +144,7 @@ export async function updateTicket(
   const ticket = await prisma.ticket.findUnique({ where: { id } });
 
   if (!ticket || ticket.workspaceId !== workspaceId) {
-    throw { status: 404, message: "Ticket not found" };
+    throw AppError.notFound("Ticket not found");
   }
 
   const { tags, ...updateData } = data;
@@ -183,7 +184,7 @@ export async function deleteTicket(id: string, workspaceId: string) {
   const ticket = await prisma.ticket.findUnique({ where: { id } });
 
   if (!ticket || ticket.workspaceId !== workspaceId) {
-    throw { status: 404, message: "Ticket not found" };
+    throw AppError.notFound("Ticket not found");
   }
 
   // Delete comments first (cascade), then the ticket in a transaction
@@ -204,7 +205,7 @@ export async function addComment(
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
 
   if (!ticket || ticket.workspaceId !== workspaceId) {
-    throw { status: 404, message: "Ticket not found" };
+    throw AppError.notFound("Ticket not found");
   }
 
   const comment = await prisma.ticketComment.create({

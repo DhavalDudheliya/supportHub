@@ -5,11 +5,16 @@
  * - OAuth connect/callback flows for Gmail and Outlook
  * - Connection status retrieval
  * - Account disconnection
+ *
+ * OAuth callbacks intentionally keep manual try/catch because they must
+ * redirect (not send JSON) on error. All other handlers rely on Express 5
+ * auto-catch + global error middleware.
  */
 
 import { Request, Response } from "express";
 import prisma from "../../lib/prisma.js";
 import { AuthenticatedRequest } from "../auth/auth.types.js";
+import { AppError } from "../../errors/index.js";
 import {
   getGmailAuthUrl,
   exchangeGmailCode,
@@ -35,20 +40,18 @@ import logger from "../../lib/logger.js";
  * Redirects the user to Google's OAuth consent screen.
  */
 export async function connectGmail(req: Request, res: Response): Promise<void> {
-  try {
-    const { workspaceId } = (req as AuthenticatedRequest).user!;
-    const authUrl = getGmailAuthUrl(workspaceId);
-    res.json({ url: authUrl });
-  } catch (err) {
-    logger.error({ err }, "Failed to generate Gmail auth URL");
-    res.status(500).json({ error: "Failed to initiate Gmail connection" });
-  }
+  const { workspaceId } = (req as AuthenticatedRequest).user!;
+  const authUrl = getGmailAuthUrl(workspaceId);
+  res.json({ url: authUrl });
 }
 
 /**
  * GET /gmail/callback
  * Handles the OAuth callback from Google.
  * Exchanges the code for tokens, stores them, and registers a Gmail Watch.
+ *
+ * NOTE: This handler keeps manual try/catch because it must redirect
+ * on both success and failure (not send JSON error responses).
  */
 export async function gmailCallback(
   req: Request,
@@ -147,19 +150,17 @@ export async function connectOutlook(
   req: Request,
   res: Response,
 ): Promise<void> {
-  try {
-    const { workspaceId } = (req as AuthenticatedRequest).user!;
-    const authUrl = await getOutlookAuthUrl(workspaceId);
-    res.json({ url: authUrl });
-  } catch (err) {
-    logger.error({ err }, "Failed to generate Outlook auth URL");
-    res.status(500).json({ error: "Failed to initiate Outlook connection" });
-  }
+  const { workspaceId } = (req as AuthenticatedRequest).user!;
+  const authUrl = await getOutlookAuthUrl(workspaceId);
+  res.json({ url: authUrl });
 }
 
 /**
  * GET /outlook/callback
  * Handles the OAuth callback from Microsoft.
+ *
+ * NOTE: This handler keeps manual try/catch because it must redirect
+ * on both success and failure (not send JSON error responses).
  */
 export async function outlookCallback(
   req: Request,
@@ -251,14 +252,9 @@ export async function outlookCallback(
  * Returns the connection status of email accounts for the current workspace.
  */
 export async function getStatus(req: Request, res: Response): Promise<void> {
-  try {
-    const { workspaceId } = (req as AuthenticatedRequest).user!;
-    const status = await getConnectionStatus(workspaceId);
-    res.json(status);
-  } catch (err) {
-    logger.error({ err }, "Failed to get email connection status");
-    res.status(500).json({ error: "Failed to get connection status" });
-  }
+  const { workspaceId } = (req as AuthenticatedRequest).user!;
+  const status = await getConnectionStatus(workspaceId);
+  res.json(status);
 }
 
 /**
@@ -266,47 +262,38 @@ export async function getStatus(req: Request, res: Response): Promise<void> {
  * Disconnects an email account (stops watch/subscription and deactivates).
  */
 export async function disconnect(req: Request, res: Response): Promise<void> {
-  try {
-    const { workspaceId } = (req as AuthenticatedRequest).user!;
-    const provider = (req.params.provider as string)?.toUpperCase() as
-      | "GMAIL"
-      | "OUTLOOK";
+  const { workspaceId } = (req as AuthenticatedRequest).user!;
+  const provider = (req.params.provider as string)?.toUpperCase() as
+    | "GMAIL"
+    | "OUTLOOK";
 
-    if (provider !== "GMAIL" && provider !== "OUTLOOK") {
-      res.status(400).json({ error: "Invalid provider. Use gmail or outlook" });
-      return;
-    }
-
-    // Try to stop the watch/subscription before deactivating
-    try {
-      const account = await getEmailAccountWithFreshTokens(
-        workspaceId,
-        provider,
-      );
-      if (account) {
-        if (provider === "GMAIL") {
-          await stopGmailWatch(account.accessToken, account.refreshToken);
-        } else if (account.watchResourceId) {
-          await deleteOutlookSubscription(
-            account.accessToken,
-            account.watchResourceId,
-          );
-        }
-      }
-    } catch (cleanupErr) {
-      // Log but don't fail — we still want to deactivate the account locally
-      logger.warn(
-        { err: cleanupErr, provider },
-        "Failed to clean up watch/subscription during disconnect",
-      );
-    }
-
-    await disconnectEmailAccount(workspaceId, provider);
-
-    logger.info({ workspaceId, provider }, "Email account disconnected");
-    res.json({ message: `${provider} account disconnected successfully` });
-  } catch (err) {
-    logger.error({ err }, "Failed to disconnect email account");
-    res.status(500).json({ error: "Failed to disconnect email account" });
+  if (provider !== "GMAIL" && provider !== "OUTLOOK") {
+    throw AppError.badRequest("Invalid provider. Use gmail or outlook");
   }
+
+  // Try to stop the watch/subscription before deactivating
+  try {
+    const account = await getEmailAccountWithFreshTokens(workspaceId, provider);
+    if (account) {
+      if (provider === "GMAIL") {
+        await stopGmailWatch(account.accessToken, account.refreshToken);
+      } else if (account.watchResourceId) {
+        await deleteOutlookSubscription(
+          account.accessToken,
+          account.watchResourceId,
+        );
+      }
+    }
+  } catch (cleanupErr) {
+    // Log but don't fail — we still want to deactivate the account locally
+    logger.warn(
+      { err: cleanupErr, provider },
+      "Failed to clean up watch/subscription during disconnect",
+    );
+  }
+
+  await disconnectEmailAccount(workspaceId, provider);
+
+  logger.info({ workspaceId, provider }, "Email account disconnected");
+  res.json({ message: `${provider} account disconnected successfully` });
 }

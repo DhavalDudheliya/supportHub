@@ -2,16 +2,17 @@
  * Auth Module — Controller (Route Handlers)
  *
  * Thin controller layer that handles HTTP request/response concerns:
- * - Validates input using Zod schemas via safeParse
+ * - Validates input using Zod schemas
  * - Delegates business logic to the auth service
- * - Maps service results/errors to appropriate HTTP responses
+ * - Relies on Express 5 automatic error forwarding + global error handler
  *
- * Each handler follows the pattern:
- *   validate → call service → send response → catch errors
+ * No try/catch needed — Express 5 catches rejected promises from async
+ * handlers and forwards them to the global error middleware automatically.
  */
 
 import { Request, Response } from "express";
 import { verifyRefreshToken } from "../../utils/jwt.js";
+import { AppError } from "../../errors/index.js";
 import {
   registerUser,
   verifyUserEmail,
@@ -31,14 +32,6 @@ import {
 import { AuthenticatedRequest } from "./auth.types.js";
 
 /**
- * Extract a flat string[] of human-readable messages from a Zod error.
- * Keeps the existing 400 response shape: { errors: string[] }
- */
-function formatZodErrors(error: import("zod").ZodError): string[] {
-  return error.issues.map((issue) => issue.message);
-}
-
-/**
  * POST /api/auth/register
  *
  * Creates a new user and creates their tenant workspace.
@@ -46,24 +39,13 @@ function formatZodErrors(error: import("zod").ZodError): string[] {
  *
  * Request body: RegisterBody (email, firstName, lastName, phone, companyName, password)
  * Response 201: { message, subdomain }
- * Response 400: { errors: string[] } — validation errors
- * Response 409: { error } — email or workspace already exists
+ * Response 400: Validation errors
+ * Response 409: Email or workspace already exists
  */
 export async function register(req: Request, res: Response): Promise<void> {
-  try {
-    const result = registerSchema.safeParse(req.body);
-    if (!result.success) {
-      res.status(400).json({ errors: formatZodErrors(result.error) });
-      return;
-    }
-
-    const data = await registerUser(result.data);
-    res.status(201).json(data);
-  } catch (error: any) {
-    const status = error.status || 500;
-    const message = error.message || "Internal server error";
-    res.status(status).json({ error: message });
-  }
+  const data = registerSchema.parse(req.body);
+  const result = await registerUser(data);
+  res.status(201).json(result);
 }
 
 /**
@@ -74,29 +56,22 @@ export async function register(req: Request, res: Response): Promise<void> {
  *
  * Query params: token (required)
  * Response 302: Redirect to {protocol}://{subdomain}.{FRONTEND_DOMAIN}/login?verified=true
- * Response 400: { error } — invalid or expired token
+ * Response 400: Invalid or expired token
  */
 export async function verifyEmail(req: Request, res: Response): Promise<void> {
-  try {
-    const token = req.query.token as string;
+  const token = req.query.token as string;
 
-    if (!token) {
-      res.status(400).json({ error: "Verification token is required" });
-      return;
-    }
-
-    // Verify the token and get the user's domain subdomain for redirect
-    const result = await verifyUserEmail(token);
-    const frontendDomain = process.env.FRONTEND_DOMAIN || "localhost:3000";
-    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
-    res.redirect(
-      `${protocol}://${result.subdomain}.${frontendDomain}/login?verified=true`,
-    );
-  } catch (error: any) {
-    const status = error.status || 500;
-    const message = error.message || "Internal server error";
-    res.status(status).json({ error: message });
+  if (!token) {
+    throw AppError.badRequest("Verification token is required");
   }
+
+  // Verify the token and get the user's domain subdomain for redirect
+  const result = await verifyUserEmail(token);
+  const frontendDomain = process.env.FRONTEND_DOMAIN || "localhost:3000";
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+  res.redirect(
+    `${protocol}://${result.subdomain}.${frontendDomain}/login?verified=true`,
+  );
 }
 
 /**
@@ -107,27 +82,16 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
  *
  * Request body: { email }
  * Response 200: { message }
- * Response 400: { errors: string[] } — validation errors
- * Response 429: { error } — rate limited
+ * Response 400: Validation errors
+ * Response 429: Rate limited
  */
 export async function resendVerification(
   req: Request,
   res: Response,
 ): Promise<void> {
-  try {
-    const result = resendVerificationSchema.safeParse(req.body);
-    if (!result.success) {
-      res.status(400).json({ errors: formatZodErrors(result.error) });
-      return;
-    }
-
-    const data = await resendVerificationForEmail(result.data.email);
-    res.status(200).json(data);
-  } catch (error: any) {
-    const status = error.status || 500;
-    const message = error.message || "Internal server error";
-    res.status(status).json({ error: message });
-  }
+  const data = resendVerificationSchema.parse(req.body);
+  const result = await resendVerificationForEmail(data.email);
+  res.status(200).json(result);
 }
 
 /**
@@ -138,25 +102,14 @@ export async function resendVerification(
  *
  * Request body: LoginBody (email, password)
  * Response 200: { accessToken, refreshToken, user }
- * Response 400: { errors: string[] } — validation errors
- * Response 401: { error } — invalid credentials
- * Response 403: { error } — email not verified
+ * Response 400: Validation errors
+ * Response 401: Invalid credentials
+ * Response 403: Email not verified
  */
 export async function login(req: Request, res: Response): Promise<void> {
-  try {
-    const result = loginSchema.safeParse(req.body);
-    if (!result.success) {
-      res.status(400).json({ errors: formatZodErrors(result.error) });
-      return;
-    }
-
-    const data = await loginUser(result.data);
-    res.status(200).json(data);
-  } catch (error: any) {
-    const status = error.status || 500;
-    const message = error.message || "Internal server error";
-    res.status(status).json({ error: message });
-  }
+  const data = loginSchema.parse(req.body);
+  const result = await loginUser(data);
+  res.status(200).json(result);
 }
 
 /**
@@ -167,35 +120,22 @@ export async function login(req: Request, res: Response): Promise<void> {
  *
  * Request body: RefreshTokenBody (refreshToken)
  * Response 200: { accessToken, refreshToken }
- * Response 400: { errors: string[] } — missing / invalid token
- * Response 401: { error } — invalid or expired token
+ * Response 400: Missing / invalid token
+ * Response 401: Invalid or expired token
  */
 export async function refreshToken(req: Request, res: Response): Promise<void> {
+  const { refreshToken: token } = refreshTokenSchema.parse(req.body);
+
+  // First verify the JWT signature and expiry before checking the DB
   try {
-    const result = refreshTokenSchema.safeParse(req.body);
-    if (!result.success) {
-      res.status(400).json({ errors: formatZodErrors(result.error) });
-      return;
-    }
-
-    const { refreshToken: token } = result.data;
-
-    // First verify the JWT signature and expiry before checking the DB
-    try {
-      verifyRefreshToken(token);
-    } catch {
-      res.status(401).json({ error: "Invalid or expired refresh token" });
-      return;
-    }
-
-    // Token is a valid JWT — now check it matches a user in the database
-    const data = await refreshUserToken(token);
-    res.status(200).json(data);
-  } catch (error: any) {
-    const status = error.status || 500;
-    const message = error.message || "Internal server error";
-    res.status(status).json({ error: message });
+    verifyRefreshToken(token);
+  } catch {
+    throw AppError.unauthorized("Invalid or expired refresh token");
   }
+
+  // Token is a valid JWT — now check it matches a user in the database
+  const data = await refreshUserToken(token);
+  res.status(200).json(data);
 }
 
 /**
@@ -205,25 +145,18 @@ export async function refreshToken(req: Request, res: Response): Promise<void> {
  * The user identity is extracted from the JWT by the auth middleware.
  *
  * Response 200: User profile with domain info
- * Response 401: { error } — not authenticated
+ * Response 401: Not authenticated
  */
 export async function me(req: Request, res: Response): Promise<void> {
-  try {
-    const authReq = req as AuthenticatedRequest;
+  const authReq = req as AuthenticatedRequest;
 
-    // This should never happen if authMiddleware is applied, but guard anyway
-    if (!authReq.user) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-
-    const profile = await getUserProfile(authReq.user.userId);
-    res.status(200).json(profile);
-  } catch (error: any) {
-    const status = error.status || 500;
-    const message = error.message || "Internal server error";
-    res.status(status).json({ error: message });
+  // This should never happen if authMiddleware is applied, but guard anyway
+  if (!authReq.user) {
+    throw AppError.unauthorized();
   }
+
+  const profile = await getUserProfile(authReq.user.userId);
+  res.status(200).json(profile);
 }
 
 /**
@@ -234,25 +167,14 @@ export async function me(req: Request, res: Response): Promise<void> {
  *
  * Request body: LookupWorkspaceBody (email)
  * Response 200: { subdomain }
- * Response 400: { errors: string[] } — validation errors
- * Response 404: { error } — email not found
+ * Response 400: Validation errors
+ * Response 404: Email not found
  */
 export async function lookupWorkspace(
   req: Request,
   res: Response,
 ): Promise<void> {
-  try {
-    const result = lookupWorkspaceSchema.safeParse(req.body);
-    if (!result.success) {
-      res.status(400).json({ errors: formatZodErrors(result.error) });
-      return;
-    }
-
-    const data = await lookupUserWorkspace(result.data.email);
-    res.status(200).json(data);
-  } catch (error: any) {
-    const status = error.status || 500;
-    const message = error.message || "Internal server error";
-    res.status(status).json({ error: message });
-  }
+  const data = lookupWorkspaceSchema.parse(req.body);
+  const result = await lookupUserWorkspace(data.email);
+  res.status(200).json(result);
 }

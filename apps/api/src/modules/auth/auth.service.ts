@@ -11,8 +11,8 @@
  * - refreshUserToken: Implements token rotation for refresh tokens
  * - getUserProfile: Fetches the authenticated user's profile
  *
- * Error Convention: Errors are thrown as `{ status, message }` objects.
- * The controller catches these and maps them to HTTP responses.
+ * Error Convention: Errors are thrown as `AppError` instances.
+ * The global error handler catches these and maps them to HTTP responses.
  */
 
 import prisma from "../../lib/prisma.js";
@@ -25,6 +25,7 @@ import {
 import { generateSubdomain } from "../../utils/subdomain.js";
 import { sendVerificationEmail } from "../../services/email.service.js";
 import { RegisterBody, LoginBody } from "./auth.types.js";
+import { AppError } from "../../errors/index.js";
 import logger from "../../lib/logger.js";
 
 /**
@@ -47,7 +48,7 @@ export async function registerUser(data: RegisterBody) {
   // 1. Check if a user with this email already exists
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
-    throw { status: 409, message: "An account with this email already exists" };
+    throw AppError.conflict("An account with this email already exists");
   }
 
   // 2. Generate the workspace subdomain from company name and check uniqueness
@@ -56,11 +57,9 @@ export async function registerUser(data: RegisterBody) {
     where: { subdomain },
   });
   if (existingWorkspace) {
-    throw {
-      status: 409,
-      message:
-        "A workspace with this company name already exists. Please choose a different name.",
-    };
+    throw AppError.conflict(
+      "A workspace with this company name already exists. Please choose a different name.",
+    );
   }
 
   // 3. Hash the password (bcrypt with 12 salt rounds)
@@ -129,15 +128,14 @@ export async function verifyUserEmail(token: string) {
   });
 
   if (!user) {
-    throw { status: 400, message: "Invalid or expired verification token" };
+    throw AppError.badRequest("Invalid or expired verification token");
   }
 
   // Check if the 24-hour verification window has passed
   if (user.emailVerifyExpires && user.emailVerifyExpires < new Date()) {
-    throw {
-      status: 400,
-      message: "Verification token has expired. Please request a new one.",
-    };
+    throw AppError.badRequest(
+      "Verification token has expired. Please request a new one.",
+    );
   }
 
   // Mark email as verified and clear the token (single-use)
@@ -194,11 +192,9 @@ export async function resendVerificationForEmail(email: string) {
   if (user.emailVerifyExpires) {
     const twentyThreeHoursFromNow = new Date(Date.now() + 23 * 60 * 60 * 1000);
     if (user.emailVerifyExpires > twentyThreeHoursFromNow) {
-      throw {
-        status: 429,
-        message:
-          "A verification email was sent recently. Please wait before requesting another.",
-      };
+      throw AppError.rateLimited(
+        "A verification email was sent recently. Please wait before requesting another.",
+      );
     }
   }
 
@@ -216,10 +212,9 @@ export async function resendVerificationForEmail(email: string) {
     );
   } catch (err) {
     logger.error({ err }, "Failed to resend verification email");
-    throw {
-      status: 500,
-      message: "Failed to send verification email. Please try again later.",
-    };
+    throw AppError.internal(
+      "Failed to send verification email. Please try again later.",
+    );
   }
 
   // Only persist the new token after successful email send
@@ -260,21 +255,18 @@ export async function loginUser(data: LoginBody) {
 
   // Use a generic error message to prevent email enumeration
   if (!user) {
-    throw { status: 401, message: "Invalid email or password" };
+    throw AppError.unauthorized("Invalid email or password");
   }
 
   // Block login for unverified accounts
   if (!user.isEmailVerified) {
-    throw {
-      status: 403,
-      message: "Please verify your email before logging in",
-    };
+    throw AppError.forbidden("Please verify your email before logging in");
   }
 
   // Verify the password against the stored hash
   const isPasswordValid = await comparePassword(password, user.passwordHash);
   if (!isPasswordValid) {
-    throw { status: 401, message: "Invalid email or password" };
+    throw AppError.unauthorized("Invalid email or password");
   }
 
   const tokenPayload = {
@@ -331,7 +323,7 @@ export async function refreshUserToken(refreshToken: string) {
   });
 
   if (!user) {
-    throw { status: 401, message: "Invalid refresh token" };
+    throw AppError.unauthorized("Invalid refresh token");
   }
 
   const tokenPayload = {
@@ -372,7 +364,7 @@ export async function getUserProfile(userId: string) {
   });
 
   if (!user) {
-    throw { status: 404, message: "User not found" };
+    throw AppError.notFound("User not found");
   }
 
   return {

@@ -10,15 +10,17 @@
  * router.get("/me", authMiddleware, meController);
  * ```
  *
- * Responds with 401 if:
+ * Throws AppError.unauthorized() if:
  * - No Authorization header is present
  * - The header doesn't follow "Bearer <token>" format
  * - The token is invalid or expired
+ * - The token payload is missing workspaceId
  */
 
 import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { AuthenticatedRequest } from "../modules/auth/auth.types.js";
+import { AppError } from "../errors/index.js";
 
 /**
  * JWT authentication guard.
@@ -26,15 +28,14 @@ import { AuthenticatedRequest } from "../modules/auth/auth.types.js";
  */
 export function authMiddleware(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ): void {
   const authHeader = req.headers.authorization;
 
   // Check for the presence and format of the Authorization header
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Access token is required" });
-    return;
+    throw AppError.unauthorized("Access token is required");
   }
 
   // Extract the token (everything after "Bearer ")
@@ -46,10 +47,7 @@ export function authMiddleware(
 
     // Verify that the token contains the required workspace context
     if (!payload.workspaceId) {
-      res
-        .status(401)
-        .json({ error: "Invalid token payload: workspaceId missing" });
-      return;
+      throw AppError.unauthorized("Invalid token payload: workspaceId missing");
     }
 
     // Attach user info to the request for downstream handlers
@@ -61,7 +59,12 @@ export function authMiddleware(
     };
 
     next(); // Token is valid — proceed to the route handler
-  } catch {
-    res.status(401).json({ error: "Invalid or expired access token" });
+  } catch (err) {
+    // If it's already an AppError, re-throw it as-is
+    if (err instanceof AppError) {
+      throw err;
+    }
+    // JWT verification failure (expired, malformed, etc.)
+    throw AppError.unauthorized("Invalid or expired access token");
   }
 }

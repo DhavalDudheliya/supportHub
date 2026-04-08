@@ -168,8 +168,8 @@ async function createTicketFromEmail(
 
   const ticketNumber = await getNextTicketNumber(workspaceId);
 
-  // Use plain text body if available, otherwise fallback to HTML
-  const description = bodyPlain || bodyHtml || "(No content)";
+  // Prefer HTML body for rich formatting, fallback to plain text
+  const description = bodyHtml || bodyPlain || "(No content)";
 
   const ticket = await prisma.ticket.create({
     data: {
@@ -228,7 +228,7 @@ async function appendReplyToTicket(
 ): Promise<void> {
   const { messageId, bodyPlain, bodyHtml, references, workspaceId } = email;
 
-  const body = bodyPlain || bodyHtml || "(No content)";
+  const body = bodyHtml || bodyPlain || "(No content)";
 
   // Check if the ticket is resolved/closed — reopen it since customer replied
   const ticket = await prisma.ticket.findUnique({
