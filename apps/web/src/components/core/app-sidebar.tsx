@@ -19,6 +19,7 @@ import {
 } from "@supporthub/ui/components/tooltip";
 
 import { cn } from "@supporthub/ui/lib/utils";
+import { useWorkspaceTheme } from "@/lib/theme-context";
 
 const mainNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
@@ -35,12 +36,13 @@ const bottomNavItems = [
 /**
  * AppSidebar — Narrow icon-only sidebar for the authenticated app shell.
  *
- * Matches the design: SupportHub logo at top, main nav icons,
+ * Matches the design: workspace logo at top (custom or default), main nav icons,
  * settings + help at bottom. Active route is highlighted with
  * a filled background.
  */
 export default function AppSidebar() {
   const pathname = usePathname();
+  const { theme } = useWorkspaceTheme();
 
   const isActive = (href: string) => {
     if (!pathname) return false;
@@ -50,13 +52,21 @@ export default function AppSidebar() {
 
   return (
     <aside className="flex h-screen w-16 flex-col items-center border-r border-border bg-background py-4">
-      {/* Logo */}
+      {/* Logo — custom workspace logo or default icon */}
       <Link
         href="/dashboard"
-        aria-label="SupportHub Dashboard"
-        className="mb-6 flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform hover:scale-105"
+        aria-label="Dashboard"
+        className="mb-6 flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform hover:scale-105 overflow-hidden"
       >
-        <TicketCheck className="h-5 w-5" />
+        {theme?.logoUrl ? (
+          <img
+            src={theme.logoUrl}
+            alt="Workspace logo"
+            className="h-6 w-6 object-contain"
+          />
+        ) : (
+          <TicketCheck className="h-5 w-5" />
+        )}
       </Link>
 
       {/* Main Navigation */}

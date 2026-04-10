@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { ThemeProvider } from "@/lib/theme-context";
 
 import AppHeader from "@/components/core/app-header";
 import AppSidebar from "@/components/core/app-sidebar";
@@ -44,6 +45,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
  *
  * Wraps all dashboard pages with:
  * - AuthProvider for user state
+ * - ThemeProvider for workspace branding (CSS variable injection)
  * - AuthGuard for route protection
  * - Sidebar (left) + Header (top) + Content area
  */
@@ -54,17 +56,19 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthProvider>
-      <AuthGuard>
-        <div className="flex h-screen overflow-hidden bg-background">
-          <AppSidebar />
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <AppHeader />
-            <main className="flex-1 overflow-y-auto bg-muted/30">
-              {children}
-            </main>
+      <ThemeProvider>
+        <AuthGuard>
+          <div className="flex h-screen overflow-hidden bg-background">
+            <AppSidebar />
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <AppHeader />
+              <main className="flex-1 overflow-y-auto bg-muted/30">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
-      </AuthGuard>
+        </AuthGuard>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

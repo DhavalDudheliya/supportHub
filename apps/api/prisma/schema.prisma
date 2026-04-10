@@ -41,8 +41,8 @@ model User {
 /// Tenant workspace created during registration.
 /// The slug is derived from the company name and used for tenant routing.
 model Workspace {
-  id            String         @id @default(uuid()) /// Primary key — UUID
-  subdomain     String         @unique /// URL-safe subdomain identifier, e.g. "acmecorp"
+  id            String          @id @default(uuid()) /// Primary key — UUID
+  subdomain     String          @unique /// URL-safe subdomain identifier, e.g. "acmecorp"
   company       String /// Original company name provided at registration
   users         User[] /// All users belonging to this workspace
   invitations   Invitation[] /// Invitations for this workspace
@@ -51,8 +51,9 @@ model Workspace {
   tags          Tag[] /// Tags for categorization
   emailAccounts EmailAccount[] /// Connected email accounts (Gmail / Outlook)
   emailMessages EmailMessage[] /// Processed inbound email records
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  theme         WorkspaceTheme? /// White-label branding configuration
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 }
 
 /// Role-based access control enum.
@@ -208,4 +209,35 @@ model EmailMessage {
   createdAt   DateTime  @default(now())
 
   @@unique([messageId, workspaceId]) /// Prevents duplicate processing
+}
+
+/// White-label theming configuration for a workspace.
+/// Stores brand colors, typography, shape, appearance, and asset URLs.
+/// Created lazily on first theme update (defaults are used until then).
+model WorkspaceTheme {
+  id           String   @id @default(uuid())
+
+  /// Brand colors stored as hex (converted to oklch at runtime)
+  primaryColor String   @default("#4F6BF0")
+  accentColor  String   @default("#7C3AED")
+
+  /// Typography — Google Font family name
+  fontFamily   String   @default("Inter")
+
+  /// Shape — border-radius in rem
+  borderRadius Float    @default(0.375)
+
+  /// Appearance — default color mode ("light" | "dark" | "system")
+  defaultMode  String   @default("system")
+
+  /// Assets — CloudFront URLs (nullable until uploaded)
+  logoUrl      String?
+  faviconUrl   String?
+
+  /// Relation — one-to-one with Workspace
+  workspaceId  String    @unique
+  workspace    Workspace @relation(fields: [workspaceId], references: [id])
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
