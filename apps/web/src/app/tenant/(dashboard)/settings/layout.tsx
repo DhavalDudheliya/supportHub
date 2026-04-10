@@ -8,6 +8,7 @@ import { cn } from "@supporthub/ui/lib/utils";
 const settingsNav = [
   { label: "Team & Agents", href: "/settings/team" },
   { label: "Email Integration", href: "/settings/email" },
+  { label: "Branding", href: "/settings/branding" },
 ];
 
 export default function SettingsLayout({
