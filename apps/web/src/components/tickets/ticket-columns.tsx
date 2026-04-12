@@ -1,7 +1,7 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal } from "lucide-react";
+import { Column, ColumnDef } from "@tanstack/react-table";
+import { ArrowDown, ArrowUp, ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -28,6 +28,29 @@ const priorityColors: Record<string, string> = {
     "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
 };
 
+function SortableHeader({
+  label,
+  column,
+}: {
+  label: string;
+  column: Column<Ticket>;
+}) {
+  const sorted = column.getIsSorted();
+  const SortIcon =
+    sorted === "asc" ? ArrowUp : sorted === "desc" ? ArrowDown : ArrowUpDown;
+
+  return (
+    <Button
+      variant="ghost"
+      className="h-8 -ml-3 px-3 font-semibold text-muted-foreground hover:text-foreground"
+      onClick={() => column.toggleSorting()}
+    >
+      {label}
+      <SortIcon className="ml-1.5 h-3.5 w-3.5" />
+    </Button>
+  );
+}
+
 export const columns: ColumnDef<Ticket>[] = [
   {
     id: "select",
@@ -53,16 +76,7 @@ export const columns: ColumnDef<Ticket>[] = [
   },
   {
     accessorKey: "ticketNumber",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        className="h-8 -ml-3 px-3 font-semibold text-muted-foreground hover:text-foreground"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        ID
-        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
-      </Button>
-    ),
+    header: ({ column }) => <SortableHeader label="ID" column={column} />,
     cell: ({ row }) => (
       <span className="font-medium text-primary">
         #{row.getValue("ticketNumber")}
@@ -71,16 +85,7 @@ export const columns: ColumnDef<Ticket>[] = [
   },
   {
     accessorKey: "subject",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        className="h-8 -ml-3 px-3 font-semibold text-muted-foreground hover:text-foreground"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Subject
-        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
-      </Button>
-    ),
+    header: ({ column }) => <SortableHeader label="Subject" column={column} />,
     cell: ({ row }) => (
       <div className="max-w-[300px]">
         <p className="font-medium truncate">{row.getValue("subject")}</p>
@@ -93,14 +98,7 @@ export const columns: ColumnDef<Ticket>[] = [
   {
     accessorKey: "customer",
     header: ({ column }) => (
-      <Button
-        variant="ghost"
-        className="h-8 -ml-3 px-3 font-semibold text-muted-foreground hover:text-foreground"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Requester
-        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
-      </Button>
+      <SortableHeader label="Requester" column={column} />
     ),
     cell: ({ row }) => {
       const customer = row.original.customer;
@@ -128,14 +126,7 @@ export const columns: ColumnDef<Ticket>[] = [
   {
     accessorKey: "createdAt",
     header: ({ column }) => (
-      <Button
-        variant="ghost"
-        className="h-8 -ml-3 px-3 font-semibold text-muted-foreground hover:text-foreground"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Requested
-        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
-      </Button>
+      <SortableHeader label="Requested" column={column} />
     ),
     cell: ({ row }) => (
       <span className="text-sm text-muted-foreground">
@@ -147,16 +138,7 @@ export const columns: ColumnDef<Ticket>[] = [
   },
   {
     accessorKey: "priority",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        className="h-8 -ml-3 px-3 font-semibold text-muted-foreground hover:text-foreground"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Priority
-        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
-      </Button>
-    ),
+    header: ({ column }) => <SortableHeader label="Priority" column={column} />,
     cell: ({ row }) => {
       const priority = row.getValue("priority") as string;
       return (
