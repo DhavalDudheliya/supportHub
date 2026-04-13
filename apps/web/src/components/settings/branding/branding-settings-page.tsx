@@ -8,10 +8,14 @@ import { Card, CardContent } from "@supporthub/ui/components/card";
 
 import { useWorkspaceTheme } from "@/lib/theme-context";
 import { useAuth } from "@/lib/auth-context";
+import { type WorkspaceTheme } from "@/lib/services/workspace.service";
 import {
-  workspaceService,
-  type WorkspaceTheme,
-} from "@/lib/services/workspace.service";
+  useUpdateTheme,
+  useUploadLogo,
+  useDeleteLogo,
+  useUploadFavicon,
+  useDeleteFavicon,
+} from "@/hooks/use-workspace";
 
 import { ThemePreview } from "@/components/settings/branding/theme-preview";
 import { BrandingSettingsHeader } from "@/components/settings/branding/branding-settings-header";
@@ -36,8 +40,20 @@ export function BrandingSettingsPage() {
   } = useWorkspaceTheme();
 
   const [draft, setDraft] = useState<WorkspaceTheme | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const isAdmin = user?.role === "ADMIN";
+
+  const updateThemeMutation = useUpdateTheme();
+  const uploadLogoMutation = useUploadLogo();
+  const deleteLogoMutation = useDeleteLogo();
+  const uploadFaviconMutation = useUploadFavicon();
+  const deleteFaviconMutation = useDeleteFavicon();
+
+  const isSaving =
+    updateThemeMutation.isPending ||
+    uploadLogoMutation.isPending ||
+    deleteLogoMutation.isPending ||
+    uploadFaviconMutation.isPending ||
+    deleteFaviconMutation.isPending;
 
   // Initialize draft from theme
   useEffect(() => {
@@ -72,9 +88,8 @@ export function BrandingSettingsPage() {
   const handleSave = useCallback(async () => {
     if (!draft) return;
 
-    setIsSaving(true);
     try {
-      await workspaceService.updateTheme({
+      await updateThemeMutation.mutateAsync({
         primaryColor: draft.primaryColor,
         accentColor: draft.accentColor,
         fontFamily: draft.fontFamily,
@@ -88,10 +103,8 @@ export function BrandingSettingsPage() {
     } catch (err) {
       console.error("Failed to save theme:", err);
       toast.error("Failed to save theme. Please try again.");
-    } finally {
-      setIsSaving(false);
     }
-  }, [draft, refreshTheme]);
+  }, [draft, refreshTheme, updateThemeMutation]);
 
   /** Reset to the last saved theme. */
   const handleReset = useCallback(() => {
@@ -103,7 +116,7 @@ export function BrandingSettingsPage() {
   const handleLogoUpload = useCallback(
     async (file: File) => {
       try {
-        const updated = await workspaceService.uploadLogo(file);
+        const updated = await uploadLogoMutation.mutateAsync(file);
         await refreshTheme();
         setDraft((prev) =>
           prev ? { ...prev, logoUrl: updated.logoUrl } : prev,
@@ -114,13 +127,13 @@ export function BrandingSettingsPage() {
         toast.error("Failed to upload logo. Please try again.");
       }
     },
-    [refreshTheme],
+    [refreshTheme, uploadLogoMutation],
   );
 
   /** Handle logo removal. */
   const handleLogoRemove = useCallback(async () => {
     try {
-      await workspaceService.deleteLogo();
+      await deleteLogoMutation.mutateAsync();
       await refreshTheme();
       setDraft((prev) => (prev ? { ...prev, logoUrl: null } : prev));
       toast.success("Logo removed");
@@ -128,13 +141,13 @@ export function BrandingSettingsPage() {
       console.error("Failed to remove logo:", err);
       toast.error("Failed to remove logo. Please try again.");
     }
-  }, [refreshTheme]);
+  }, [refreshTheme, deleteLogoMutation]);
 
   /** Handle favicon upload. */
   const handleFaviconUpload = useCallback(
     async (file: File) => {
       try {
-        const updated = await workspaceService.uploadFavicon(file);
+        const updated = await uploadFaviconMutation.mutateAsync(file);
         await refreshTheme();
         setDraft((prev) =>
           prev ? { ...prev, faviconUrl: updated.faviconUrl } : prev,
@@ -145,13 +158,13 @@ export function BrandingSettingsPage() {
         toast.error("Failed to upload favicon. Please try again.");
       }
     },
-    [refreshTheme],
+    [refreshTheme, uploadFaviconMutation],
   );
 
   /** Handle favicon removal. */
   const handleFaviconRemove = useCallback(async () => {
     try {
-      await workspaceService.deleteFavicon();
+      await deleteFaviconMutation.mutateAsync();
       await refreshTheme();
       setDraft((prev) => (prev ? { ...prev, faviconUrl: null } : prev));
       toast.success("Favicon removed");
@@ -159,7 +172,7 @@ export function BrandingSettingsPage() {
       console.error("Failed to remove favicon:", err);
       toast.error("Failed to remove favicon. Please try again.");
     }
-  }, [refreshTheme]);
+  }, [refreshTheme, deleteFaviconMutation]);
 
   if (isThemeLoading || !draft) {
     return (

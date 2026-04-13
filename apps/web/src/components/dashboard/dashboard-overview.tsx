@@ -1,15 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { useMemo } from "react";
 
 import { useAuth } from "@/lib/auth-context";
-import {
-  emailService,
-  type EmailConnectionStatus,
-} from "@/lib/services/email.service";
-import { customerService } from "@/lib/services/customer.service";
-import { ticketService, type Ticket } from "@/lib/services/ticket.service";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
+
+import { useTickets } from "@/hooks/use-tickets";
+import { useCustomersList } from "@/hooks/use-customers";
+import { useEmailStatus } from "@/hooks/use-email";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import {
@@ -29,51 +28,56 @@ const emptyStats: DashboardStatsData = {
 
 export function DashboardOverview() {
   const { user } = useAuth();
-  const [stats, setStats] = useState<DashboardStatsData>(emptyStats);
-  const [recentTickets, setRecentTickets] = useState<Ticket[]>([]);
-  const [emailStatus, setEmailStatus] = useState<EmailConnectionStatus | null>(
-    null,
+  const queryClient = useQueryClient();
+
+  const { data: allTickets, isLoading: loadingAll } = useTickets({
+    view: "all",
+    page: 1,
+    limit: 1,
+  });
+  const { data: unsolvedTickets, isLoading: loadingUnsolved } = useTickets({
+    view: "unsolved",
+    page: 1,
+    limit: 1,
+  });
+  const { data: unassignedTickets, isLoading: loadingUnassigned } = useTickets({
+    view: "unassigned",
+    page: 1,
+    limit: 1,
+  });
+  const { data: customers, isLoading: loadingCustomers } = useCustomersList(
+    1,
+    1,
   );
-  const [loading, setLoading] = useState(true);
+  const { data: recentTicketsResponse, isLoading: loadingRecent } = useTickets({
+    view: "recent",
+    page: 1,
+    limit: 5,
+  });
+  const { data: emailStatus, isLoading: loadingEmail } = useEmailStatus();
 
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      setLoading(true);
+  const loading =
+    loadingAll ||
+    loadingUnsolved ||
+    loadingUnassigned ||
+    loadingCustomers ||
+    loadingRecent ||
+    loadingEmail;
 
-      const [
-        allTickets,
-        unsolvedTickets,
-        unassignedTickets,
-        customers,
-        recentTicketsResponse,
-        emailConnectionStatus,
-      ] = await Promise.all([
-        ticketService.list({ view: "all", page: 1, limit: 1 }),
-        ticketService.list({ view: "unsolved", page: 1, limit: 1 }),
-        ticketService.list({ view: "unassigned", page: 1, limit: 1 }),
-        customerService.list(1, 1),
-        ticketService.list({ view: "recent", page: 1, limit: 5 }),
-        emailService.getStatus(),
-      ]);
+  const stats: DashboardStatsData = {
+    totalTickets: allTickets?.total ?? 0,
+    unsolvedTickets: unsolvedTickets?.total ?? 0,
+    unassignedTickets: unassignedTickets?.total ?? 0,
+    totalCustomers: customers?.total ?? 0,
+  };
 
-      setStats({
-        totalTickets: allTickets.total,
-        unsolvedTickets: unsolvedTickets.total,
-        unassignedTickets: unassignedTickets.total,
-        totalCustomers: customers.total,
-      });
-      setRecentTickets(recentTicketsResponse.tickets);
-      setEmailStatus(emailConnectionStatus);
-    } catch {
-      toast.error("Failed to load dashboard");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const recentTickets = recentTicketsResponse?.tickets ?? [];
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.tickets.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.email.status() });
+  };
 
   const connectedProviders = useMemo(() => {
     if (!emailStatus) {
@@ -94,7 +98,7 @@ export function DashboardOverview() {
         firstName={firstName}
         company={company}
         loading={loading}
-        onRefresh={fetchDashboardData}
+        onRefresh={handleRefresh}
       />
 
       <DashboardStats stats={stats} loading={loading} />
@@ -104,7 +108,7 @@ export function DashboardOverview() {
 
         <div className="grid gap-4">
           <EmailChannelsCard
-            emailStatus={emailStatus}
+            emailStatus={emailStatus ?? null}
             loading={loading}
             connectedProviders={connectedProviders}
           />

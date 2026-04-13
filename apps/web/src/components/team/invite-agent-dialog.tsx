@@ -23,7 +23,7 @@ import {
 } from "@supporthub/ui/components/field";
 import { toast } from "sonner";
 import { Loader2, MailPlus } from "lucide-react";
-import { invitationService } from "@/lib/services/invitation.service";
+import { useInviteAgent } from "@/hooks/use-invitations";
 
 const inviteSchema = z.object({
   email: z.string().email("Please provide a valid email address"),
@@ -37,7 +37,8 @@ export function InviteAgentDialog({
   onInviteSuccess: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const inviteMutation = useInviteAgent();
+  const loading = inviteMutation.isPending;
 
   const {
     register,
@@ -52,18 +53,17 @@ export function InviteAgentDialog({
   });
 
   async function onSubmit(values: InviteFormValues) {
-    setLoading(true);
-    try {
-      await invitationService.inviteAgent(values.email);
-      toast.success("Invitation sent successfully");
-      reset();
-      setOpen(false);
-      onInviteSuccess();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to send invitation");
-    } finally {
-      setLoading(false);
-    }
+    inviteMutation.mutate(values.email, {
+      onSuccess: () => {
+        toast.success("Invitation sent successfully");
+        reset();
+        setOpen(false);
+        onInviteSuccess();
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.error || "Failed to send invitation");
+      },
+    });
   }
 
   return (

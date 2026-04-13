@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ticketService,
-  type Ticket,
-  type ListTicketsParams,
-} from "@/lib/services/ticket.service";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+
+import { useTickets, useCreateTicket } from "@/hooks/use-tickets";
 import { useTicketRealtime } from "@/hooks/use-ticket-realtime";
+import { queryKeys } from "@/lib/query-keys";
 
 import {
   TicketSidebar,
@@ -20,37 +19,25 @@ import { TicketListContent } from "@/components/tickets/ticket-list-content";
 
 export function TicketsPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeView, setActiveView] = useState<ViewKey>("unsolved");
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
 
-  // Real-time: auto-refresh when new tickets/replies arrive via WebSocket
+  const { data, isLoading } = useTickets({ view: activeView });
+  const tickets = data?.tickets || [];
+  const total = data?.total || 0;
+
+  // Real-time: invalidate queries when new tickets/replies arrive via WebSocket
   useTicketRealtime({
-    onNewTicket: () => fetchTickets(),
-    onTicketUpdated: () => fetchTickets(),
-    onTicketReply: () => fetchTickets(),
+    onNewTicket: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tickets.lists() });
+    },
+    onTicketUpdated: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tickets.lists() });
+    },
+    onTicketReply: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tickets.lists() });
+    },
   });
-
-  const fetchTickets = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params: ListTicketsParams = {
-        view: activeView,
-      };
-      const data = await ticketService.list(params);
-      setTickets(data.tickets);
-      setTotal(data.total);
-    } catch {
-      toast.error("Failed to load tickets");
-    } finally {
-      setLoading(false);
-    }
-  }, [activeView]);
-
-  useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
 
   const viewLabel = views.find((v) => v.key === activeView)?.label ?? "Tickets";
 
@@ -62,10 +49,12 @@ export function TicketsPage() {
         <TicketListHeader
           title={viewLabel}
           total={total}
-          onSuccess={fetchTickets}
+          onSuccess={() => {
+            /* handled by hook */
+          }}
         />
         <TicketListContent
-          loading={loading}
+          loading={isLoading}
           tickets={tickets}
           onRowClick={(ticket) => router.push(`/tickets/${ticket.id}`)}
         />

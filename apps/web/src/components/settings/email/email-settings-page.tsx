@@ -4,10 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import {
-  emailService,
-  type EmailConnectionStatus,
-} from "@/lib/services/email.service";
+import { useEmailStatus } from "@/hooks/use-email";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 
 import { EmailSettingsHeader } from "@/components/settings/email/email-settings-header";
 import { HowItWorksCard } from "@/components/settings/email/how-it-works-card";
@@ -16,24 +15,12 @@ import { EmailConnectionsList } from "@/components/settings/email/email-connecti
 export function EmailSettingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [status, setStatus] = useState<EmailConnectionStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: status, isLoading: loading } = useEmailStatus();
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await emailService.getStatus();
-      setStatus(data);
-    } catch {
-      toast.error("Failed to load email connection status");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
+  const fetchStatus = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.email.status() });
+  }, [queryClient]);
 
   // Show toast based on OAuth callback query params
   useEffect(() => {
@@ -66,7 +53,7 @@ export function EmailSettingsPage() {
       <EmailSettingsHeader onRefresh={fetchStatus} loading={loading} />
       <HowItWorksCard />
       <EmailConnectionsList
-        status={status}
+        status={status ?? null}
         loading={loading}
         onStatusChange={fetchStatus}
       />

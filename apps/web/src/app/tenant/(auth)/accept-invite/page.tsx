@@ -6,6 +6,18 @@ export const metadata: Metadata = {
   description: "Join your team's SupportHub workspace",
 };
 
+import { Suspense } from "react";
+
 export default function Page() {
-  return <AcceptInvitePage />;
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
+      <AcceptInvitePage />
+    </Suspense>
+  );
 }

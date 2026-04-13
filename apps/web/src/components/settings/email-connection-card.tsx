@@ -26,6 +26,7 @@ import { Badge } from "@supporthub/ui/components/badge";
 
 import type { EmailAccountStatus } from "@/lib/services/email.service";
 import { emailService } from "@/lib/services/email.service";
+import { useDisconnectEmail } from "@/hooks/use-email";
 
 // --- Provider Branding ---
 
@@ -80,7 +81,8 @@ export function EmailConnectionCard({
   onStatusChange,
 }: EmailConnectionCardProps) {
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const disconnectMutation = useDisconnectEmail();
+  const isDisconnecting = disconnectMutation.isPending;
 
   const config = providerConfig[provider];
   const isConnected = !!status;
@@ -104,21 +106,18 @@ export function EmailConnectionCard({
     }
   };
 
-  const handleDisconnect = async () => {
-    try {
-      setIsDisconnecting(true);
-      await emailService.disconnect(
-        provider.toLowerCase() as "gmail" | "outlook",
-      );
-      toast.success(`${config.name} account disconnected`);
-      onStatusChange();
-    } catch (error: any) {
-      toast.error(
-        error.response?.data?.error || `Failed to disconnect ${config.name}`,
-      );
-    } finally {
-      setIsDisconnecting(false);
-    }
+  const handleDisconnect = () => {
+    disconnectMutation.mutate(provider.toLowerCase() as "gmail" | "outlook", {
+      onSuccess: () => {
+        toast.success(`${config.name} account disconnected`);
+        onStatusChange();
+      },
+      onError: (error: any) => {
+        toast.error(
+          error.response?.data?.error || `Failed to disconnect ${config.name}`,
+        );
+      },
+    });
   };
 
   return (

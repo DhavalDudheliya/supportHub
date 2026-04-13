@@ -2,42 +2,39 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-  invitationService,
-  type Invitation,
-} from "@/lib/services/invitation.service";
+  usePendingInvitations,
+  useRevokeInvitation,
+} from "@/hooks/use-invitations";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { toast } from "sonner";
 
 import { TeamSettingsHeader } from "@/components/settings/team/team-settings-header";
 import { PendingInvitationsCard } from "@/components/settings/team/pending-invitations-card";
 
 export function TeamSettingsPage() {
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: invitations = [], isLoading: loading } =
+    usePendingInvitations();
+  const revokeMutation = useRevokeInvitation();
 
-  const fetchInvitations = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await invitationService.getPendingInvitations();
-      setInvitations(data);
-    } catch (error) {
-      toast.error("Failed to load invitations");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchInvitations = useCallback(() => {
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.invitations.pending(),
+    });
+  }, [queryClient]);
 
-  useEffect(() => {
-    fetchInvitations();
-  }, [fetchInvitations]);
-
-  const handleRevoke = async (id: string) => {
-    try {
-      await invitationService.revokeInvitation(id);
-      toast.success("Invitation revoked");
-      fetchInvitations();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to revoke invitation");
-    }
+  const handleRevoke = (id: string) => {
+    revokeMutation.mutate(id, {
+      onSuccess: () => {
+        toast.success("Invitation revoked");
+      },
+      onError: (error: any) => {
+        toast.error(
+          error.response?.data?.error || "Failed to revoke invitation",
+        );
+      },
+    });
   };
 
   return (

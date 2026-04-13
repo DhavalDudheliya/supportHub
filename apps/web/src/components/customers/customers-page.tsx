@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import {
-  customerService,
-  type Customer,
-} from "@/lib/services/customer.service";
+import { useCustomers } from "@/hooks/use-customers";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { CustomersHeader } from "@/components/customers/customers-header";
 import { CustomersStats } from "@/components/customers/customers-stats";
 import { CustomersListCard } from "@/components/customers/customers-list-card";
@@ -14,45 +13,15 @@ import { CustomersListCard } from "@/components/customers/customers-list-card";
 const FETCH_LIMIT = 100;
 
 export function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const queryClient = useQueryClient();
+  const { data, isLoading: loading } = useCustomers();
+  const customers = data?.customers || [];
+  const total = data?.total || 0;
 
-  const fetchCustomers = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      const firstPage = await customerService.list(1, FETCH_LIMIT);
-      const totalPages = Math.max(1, Math.ceil(firstPage.total / FETCH_LIMIT));
-
-      if (totalPages === 1) {
-        setCustomers(firstPage.customers);
-        setTotal(firstPage.total);
-        return;
-      }
-
-      const remainingPages = await Promise.all(
-        Array.from({ length: totalPages - 1 }, (_, index) =>
-          customerService.list(index + 2, FETCH_LIMIT),
-        ),
-      );
-
-      setCustomers([
-        ...firstPage.customers,
-        ...remainingPages.flatMap((response) => response.customers),
-      ]);
-      setTotal(firstPage.total);
-    } catch {
-      toast.error("Failed to load customers");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+  const fetchCustomers = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.customers.all });
+  }, [queryClient]);
 
   const filteredCustomers = useMemo(() => {
     const search = query.trim().toLowerCase();

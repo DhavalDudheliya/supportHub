@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Metadata } from "next";
 
 import LoginForm from "@/components/auth/login-form";
@@ -8,5 +9,15 @@ export const metadata: Metadata = {
 };
 
 export default function TenantLoginPage() {
-  return <LoginForm />;
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
+  );
 }

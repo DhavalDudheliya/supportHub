@@ -24,11 +24,8 @@ import {
 } from "@supporthub/ui/components/field";
 import { toast } from "sonner";
 import { Loader2, Plus } from "lucide-react";
-import { ticketService } from "@/lib/services/ticket.service";
-import {
-  customerService,
-  type Customer,
-} from "@/lib/services/customer.service";
+import { useCreateTicket } from "@/hooks/use-tickets";
+import { useCustomersList } from "@/hooks/use-customers";
 
 const createTicketSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
@@ -41,8 +38,10 @@ type CreateTicketForm = z.infer<typeof createTicketSchema>;
 
 export function CreateTicketDialog({ onSuccess }: { onSuccess: () => void }) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const { data: customerData } = useCustomersList(1, 100, open);
+  const customers = customerData?.customers || [];
+
+  const createTicketMutation = useCreateTicket();
 
   const {
     register,
@@ -59,42 +58,26 @@ export function CreateTicketDialog({ onSuccess }: { onSuccess: () => void }) {
     },
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    if (open) {
-      customerService
-        .list(1, 100)
-        .then((res) => {
-          if (!cancelled) setCustomers(res.customers);
-        })
-        .catch(() => {
-          if (!cancelled) toast.error("Failed to load customers");
-        });
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
-
   async function onSubmit(values: CreateTicketForm) {
-    setLoading(true);
-    try {
-      await ticketService.create({
+    createTicketMutation.mutate(
+      {
         subject: values.subject,
         description: values.description,
         customerId: values.customerId,
         priority: values.priority,
-      });
-      toast.success("Ticket created successfully");
-      reset();
-      setOpen(false);
-      onSuccess();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to create ticket");
-    } finally {
-      setLoading(false);
-    }
+      },
+      {
+        onSuccess: () => {
+          toast.success("Ticket created successfully");
+          reset();
+          setOpen(false);
+          onSuccess();
+        },
+      },
+    );
   }
+
+  const isPending = createTicketMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -120,7 +103,7 @@ export function CreateTicketDialog({ onSuccess }: { onSuccess: () => void }) {
               <Input
                 id="subject"
                 placeholder="Brief summary of the issue"
-                disabled={loading}
+                disabled={isPending}
                 {...register("subject")}
               />
             </FieldContent>
@@ -134,7 +117,7 @@ export function CreateTicketDialog({ onSuccess }: { onSuccess: () => void }) {
                 id="description"
                 placeholder="Describe the issue in detail..."
                 rows={4}
-                disabled={loading}
+                disabled={isPending}
                 {...register("description")}
               />
             </FieldContent>
@@ -148,7 +131,7 @@ export function CreateTicketDialog({ onSuccess }: { onSuccess: () => void }) {
                 <select
                   id="customerId"
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={loading}
+                  disabled={isPending}
                   {...register("customerId")}
                 >
                   <option value="">Select customer...</option>
@@ -168,7 +151,7 @@ export function CreateTicketDialog({ onSuccess }: { onSuccess: () => void }) {
                 <select
                   id="priority"
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  disabled={loading}
+                  disabled={isPending}
                   {...register("priority")}
                 >
                   <option value="LOW">Low</option>
@@ -186,12 +169,12 @@ export function CreateTicketDialog({ onSuccess }: { onSuccess: () => void }) {
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              disabled={loading}
+              disabled={isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Ticket
             </Button>
           </DialogFooter>

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { EmailSettingsPage } from "@/components/settings/email/email-settings-page";
 import { Metadata } from "next";
 
@@ -7,5 +8,15 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <EmailSettingsPage />;
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
+      <EmailSettingsPage />
+    </Suspense>
+  );
 }

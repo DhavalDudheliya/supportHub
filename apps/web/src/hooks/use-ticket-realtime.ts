@@ -17,6 +17,8 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { getSocket, disconnectSocket } from "@/lib/socket";
 import { useAuth } from "@/lib/auth-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import type { Socket } from "socket.io-client";
 
 interface TicketCreatedPayload {
@@ -74,6 +76,7 @@ export function useTicketRealtime(options: UseTicketRealtimeOptions = {}): {
     enabled = true,
   } = options;
   const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const socketRef = useRef<Socket | null>(null);
 
   // Use refs for callbacks to avoid re-subscribing on every render
@@ -92,6 +95,9 @@ export function useTicketRealtime(options: UseTicketRealtimeOptions = {}): {
     // --- Event Handlers ---
 
     const handleTicketCreated = (data: TicketCreatedPayload) => {
+      // Invalidate ticket queries to refetch globally
+      queryClient.invalidateQueries({ queryKey: queryKeys.tickets.all });
+
       // Show toast for email-sourced tickets
       if (data.ticket.source === "EMAIL") {
         toast.info(`New ticket from email`, {
@@ -103,10 +109,16 @@ export function useTicketRealtime(options: UseTicketRealtimeOptions = {}): {
     };
 
     const handleTicketUpdated = (data: TicketUpdatedPayload) => {
+      // Avoid a full re-fetch if we already have the optimistic update,
+      // but invalidating the list is generally safe here.
+      queryClient.invalidateQueries({ queryKey: queryKeys.tickets.all });
+
       callbacksRef.current.onTicketUpdated?.(data);
     };
 
     const handleTicketReply = (data: TicketReplyPayload) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tickets.all });
+
       if (data.reopened) {
         toast.info("Ticket reopened", {
           description: "A customer replied to a resolved ticket.",

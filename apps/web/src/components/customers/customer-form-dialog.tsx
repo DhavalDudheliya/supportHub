@@ -25,10 +25,8 @@ import {
 } from "@supporthub/ui/components/field";
 import { Input } from "@supporthub/ui/components/input";
 
-import {
-  customerService,
-  type Customer,
-} from "@/lib/services/customer.service";
+import { type Customer } from "@/lib/services/customer.service";
+import { useCreateCustomer, useUpdateCustomer } from "@/hooks/use-customers";
 
 const customerSchema = z.object({
   name: z.string().trim().min(2, "Please enter the customer's name"),
@@ -53,7 +51,10 @@ export function CustomerFormDialog({
   onSuccess,
 }: CustomerFormDialogProps) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+
+  const createMutation = useCreateCustomer();
+  const updateMutation = useUpdateCustomer();
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   const isEditMode = Boolean(customer);
 
@@ -82,37 +83,43 @@ export function CustomerFormDialog({
   }, [customer, open, reset]);
 
   async function onSubmit(values: CustomerFormValues) {
-    setLoading(true);
+    const payload = {
+      name: values.name,
+      email: values.email,
+      phone: values.phone || undefined,
+    };
 
-    try {
-      const payload = {
-        name: values.name,
-        email: values.email,
-        phone: values.phone || undefined,
-      };
-
-      if (customer) {
-        await customerService.update(customer.id, payload);
-        toast.success("Customer updated successfully");
-      } else {
-        await customerService.create(payload);
-        toast.success("Customer created successfully");
-      }
-
-      setOpen(false);
-      reset({
-        name: "",
-        email: "",
-        phone: "",
-      });
-      onSuccess();
-    } catch (error: any) {
-      toast.error(
-        error.response?.data?.error ||
-          `Failed to ${customer ? "update" : "create"} customer`,
+    if (customer) {
+      updateMutation.mutate(
+        { id: customer.id, data: payload },
+        {
+          onSuccess: () => {
+            toast.success("Customer updated successfully");
+            setOpen(false);
+            reset();
+            onSuccess();
+          },
+          onError: (error: any) => {
+            toast.error(
+              error.response?.data?.error || "Failed to update customer",
+            );
+          },
+        },
       );
-    } finally {
-      setLoading(false);
+    } else {
+      createMutation.mutate(payload, {
+        onSuccess: () => {
+          toast.success("Customer created successfully");
+          setOpen(false);
+          reset();
+          onSuccess();
+        },
+        onError: (error: any) => {
+          toast.error(
+            error.response?.data?.error || "Failed to create customer",
+          );
+        },
+      });
     }
   }
 
@@ -152,7 +159,7 @@ export function CustomerFormDialog({
               <Input
                 id="name"
                 placeholder="Ava Thompson"
-                disabled={loading}
+                disabled={isPending}
                 {...register("name")}
               />
             </FieldContent>
@@ -166,7 +173,7 @@ export function CustomerFormDialog({
                 id="email"
                 type="email"
                 placeholder="ava@example.com"
-                disabled={loading}
+                disabled={isPending}
                 {...register("email")}
               />
             </FieldContent>
@@ -179,7 +186,7 @@ export function CustomerFormDialog({
               <Input
                 id="phone"
                 placeholder="+1 (555) 123-4567"
-                disabled={loading}
+                disabled={isPending}
                 {...register("phone")}
               />
             </FieldContent>
@@ -191,12 +198,12 @@ export function CustomerFormDialog({
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              disabled={loading}
+              disabled={isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditMode ? "Save Changes" : "Create Customer"}
             </Button>
           </DialogFooter>

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ticketService, type Ticket } from "@/lib/services/ticket.service";
 import { toast } from "sonner";
+import { useTicket, useAddComment, useUpdateTicket } from "@/hooks/use-tickets";
 
 import { TicketDetailHeader } from "@/components/tickets/detail/ticket-detail-header";
 import { TicketConversation } from "@/components/tickets/detail/ticket-conversation";
@@ -14,53 +13,34 @@ export function TicketDetailPage() {
   const params = useParams();
   const ticketId = params?.id as string;
 
-  const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const { data: ticket, isLoading } = useTicket(ticketId);
 
-  const fetchTicket = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await ticketService.get(ticketId);
-      setTicket(data);
-    } catch {
-      toast.error("Failed to load ticket");
-    } finally {
-      setLoading(false);
-    }
-  }, [ticketId]);
-
-  useEffect(() => {
-    if (ticketId) fetchTicket();
-  }, [ticketId, fetchTicket]);
+  const addCommentMutation = useAddComment();
+  const updateTicketMutation = useUpdateTicket();
 
   const handleAddComment = async (body: string, isInternal: boolean) => {
-    setSubmitting(true);
-    try {
-      await ticketService.addComment(ticketId, {
-        body,
-        isInternal,
-      });
-      fetchTicket();
-      toast.success(isInternal ? "Internal note added" : "Reply sent");
-    } catch {
-      toast.error("Failed to add comment");
-    } finally {
-      setSubmitting(false);
-    }
+    addCommentMutation.mutate(
+      { ticketId, data: { body, isInternal } },
+      {
+        onSuccess: () => {
+          toast.success(isInternal ? "Internal note added" : "Reply sent");
+        },
+      },
+    );
   };
 
   const handleUpdateProperty = async (field: string, value: any) => {
-    try {
-      await ticketService.update(ticketId, { [field]: value });
-      fetchTicket();
-      toast.success(`Ticket ${field} updated`);
-    } catch {
-      toast.error(`Failed to update ${field}`);
-    }
+    updateTicketMutation.mutate(
+      { id: ticketId, data: { [field]: value } },
+      {
+        onSuccess: () => {
+          toast.success(`Ticket ${field} updated`);
+        },
+      },
+    );
   };
 
-  if (loading || !ticket) {
+  if (isLoading || !ticket) {
     return (
       <div className="flex items-center justify-center p-16 text-muted-foreground">
         Loading ticket...
@@ -81,7 +61,7 @@ export function TicketDetailPage() {
           <TicketConversation ticket={ticket} />
           <TicketReplyEditor
             onAddComment={handleAddComment}
-            submitting={submitting}
+            submitting={addCommentMutation.isPending}
           />
         </div>
 
