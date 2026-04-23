@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useTickets, useCreateTicket } from "@/hooks/use-tickets";
-import { useTicketRealtime } from "@/hooks/use-ticket-realtime";
 import { queryKeys } from "@/lib/query-keys";
 
 import {
@@ -25,19 +24,6 @@ export function TicketsPage() {
   const { data, isLoading } = useTickets({ view: activeView });
   const tickets = data?.tickets || [];
   const total = data?.total || 0;
-
-  // Real-time: invalidate queries when new tickets/replies arrive via WebSocket
-  useTicketRealtime({
-    onNewTicket: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tickets.lists() });
-    },
-    onTicketUpdated: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tickets.lists() });
-    },
-    onTicketReply: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tickets.lists() });
-    },
-  });
 
   const viewLabel = views.find((v) => v.key === activeView)?.label ?? "Tickets";
 

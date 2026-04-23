@@ -46,7 +46,7 @@ export const emailQueue = new Queue<EmailJobData>("email-processing", {
 export async function enqueueEmailJob(data: EmailJobData): Promise<void> {
   await emailQueue.add("process-email", data, {
     // Deduplicate by account + historyId/messageId to avoid double processing
-    jobId: `${data.provider}:${data.accountEmail}:${data.historyId || data.messageId}`,
+    jobId: `${data.provider}-${data.accountEmail}-${data.historyId || data.messageId}`,
   });
 }
 
@@ -90,6 +90,6 @@ export async function enqueueAIClassificationJob(
   data: AIClassificationJobData,
 ): Promise<void> {
   await aiClassificationQueue.add("classify-ticket", data, {
-    jobId: `classify:${data.ticketId}`, // Deduplicate by ticket ID
+    jobId: `classify-${data.ticketId}`, // Deduplicate by ticket ID
   });
 }

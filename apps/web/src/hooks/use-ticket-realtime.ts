@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { getSocket, disconnectSocket } from "@/lib/socket";
 import { useAuth } from "@/lib/auth-context";
@@ -77,6 +78,7 @@ export function useTicketRealtime(options: UseTicketRealtimeOptions = {}): {
   } = options;
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const socketRef = useRef<Socket | null>(null);
 
   // Use refs for callbacks to avoid re-subscribing on every render
@@ -103,6 +105,10 @@ export function useTicketRealtime(options: UseTicketRealtimeOptions = {}): {
         toast.info(`New ticket from email`, {
           description: `#${data.ticket.ticketNumber} — ${data.ticket.subject}`,
           duration: 6000,
+          action: {
+            label: "View",
+            onClick: () => router.push(`/tickets/${data.ticket.id}`),
+          },
         });
       }
       callbacksRef.current.onNewTicket?.(data);
@@ -123,6 +129,10 @@ export function useTicketRealtime(options: UseTicketRealtimeOptions = {}): {
         toast.info("Ticket reopened", {
           description: "A customer replied to a resolved ticket.",
           duration: 5000,
+          action: {
+            label: "View",
+            onClick: () => router.push(`/tickets/${data.ticketId}`),
+          },
         });
       }
       callbacksRef.current.onTicketReply?.(data);
