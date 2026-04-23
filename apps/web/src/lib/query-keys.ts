@@ -38,4 +38,19 @@ export const queryKeys = {
     all: ["invitations"] as const,
     pending: () => [...queryKeys.invitations.all, "pending"] as const,
   },
+
+  // ── Reports ──
+  reports: {
+    all: ["reports"] as const,
+    overview: (from?: string, to?: string) =>
+      [...queryKeys.reports.all, "overview", { from, to }] as const,
+    volume: (from?: string, to?: string) =>
+      [...queryKeys.reports.all, "volume", { from, to }] as const,
+    statusBreakdown: (from?: string, to?: string) =>
+      [...queryKeys.reports.all, "status-breakdown", { from, to }] as const,
+    agentPerformance: (from?: string, to?: string) =>
+      [...queryKeys.reports.all, "agent-performance", { from, to }] as const,
+    tagDistribution: (from?: string, to?: string) =>
+      [...queryKeys.reports.all, "tags", { from, to }] as const,
+  },
 } as const;

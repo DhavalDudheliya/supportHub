@@ -16,6 +16,7 @@ import emailRoutes from "./modules/email/email.routes.js";
 import workspaceRoutes from "./modules/workspace/workspace.routes.js";
 import rulesRoutes from "./modules/rules/rules.routes.js";
 import aiLogsRoutes from "./modules/rules/ai-logs.routes.js";
+import reportsRoutes from "./modules/reports/reports.routes.js";
 
 const router: IRouter = Router();
 
@@ -29,5 +30,6 @@ router.use("/v1/email", emailRoutes);
 router.use("/v1/workspace", workspaceRoutes);
 router.use("/v1/rules", rulesRoutes);
 router.use("/v1/ai-logs", aiLogsRoutes);
+router.use("/v1/reports", reportsRoutes);
 
 export default router;
