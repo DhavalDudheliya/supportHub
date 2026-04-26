@@ -50,6 +50,7 @@ model Workspace {
   customers       Customer[] /// External customers in this workspace
   tickets         Ticket[] /// All tickets in this workspace
   tags            Tag[] /// Tags for categorization
+  tagSuggestions  TagSuggestion[] /// AI-suggested tags pending review
   emailAccounts   EmailAccount[] /// Connected email accounts (Gmail / Outlook)
   emailMessages   EmailMessage[] /// Processed inbound email records
   theme           WorkspaceTheme? /// White-label branding configuration
@@ -170,18 +171,20 @@ model Tag {
 /// AI-suggested tag for a ticket — pending agent review.
 /// Created when the AI's confidence is below the 70% threshold.
 model TagSuggestion {
-  id         String           @id @default(uuid())
-  tagId      String
-  tag        Tag              @relation(fields: [tagId], references: [id])
-  ticketId   String
-  ticket     Ticket           @relation(fields: [ticketId], references: [id])
-  confidence Float /// 0.0–1.0 confidence score from Gemini
-  status     SuggestionStatus @default(PENDING)
-  reviewedBy String? /// userId who accepted/rejected
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+  id          String           @id @default(uuid())
+  tagId       String
+  tag         Tag              @relation(fields: [tagId], references: [id])
+  ticketId    String
+  ticket      Ticket           @relation(fields: [ticketId], references: [id])
+  confidence  Float /// 0.0–1.0 confidence score from Gemini
+  status      SuggestionStatus @default(PENDING)
+  reviewedBy  String? /// userId who accepted/rejected
+  workspaceId String
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
-  @@unique([tagId, ticketId])
+  @@unique([workspaceId, tagId, ticketId])
 }
 
 enum SuggestionStatus {

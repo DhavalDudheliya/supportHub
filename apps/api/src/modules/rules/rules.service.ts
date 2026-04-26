@@ -59,6 +59,22 @@ export async function getRule(id: string, workspaceId: string) {
  * Automatically assigns the next priority (appended at end).
  */
 export async function createRule(data: CreateRuleInput, workspaceId: string) {
+  // Validate assignee if provided or if strategy is SPECIFIC
+  if (data.strategy === "SPECIFIC" && !data.assigneeId) {
+    throw AppError.badRequest("Assignee is required when strategy is SPECIFIC");
+  }
+
+  if (data.assigneeId) {
+    const assignee = await prisma.user.findFirst({
+      where: { id: data.assigneeId, workspaceId },
+    });
+    if (!assignee) {
+      throw AppError.badRequest(
+        "Invalid assignee: User not found in workspace",
+      );
+    }
+  }
+
   // Get the current max priority to append at the end
   const lastRule = await prisma.assignmentRule.findFirst({
     where: { workspaceId },
@@ -100,6 +116,25 @@ export async function updateRule(
     throw AppError.notFound("Assignment rule not found");
   }
 
+  const newStrategy = data.strategy ?? rule.strategy;
+  const newAssigneeId =
+    data.assigneeId !== undefined ? data.assigneeId : rule.assigneeId;
+
+  if (newStrategy === "SPECIFIC" && !newAssigneeId) {
+    throw AppError.badRequest("Assignee is required when strategy is SPECIFIC");
+  }
+
+  if (data.assigneeId) {
+    const assignee = await prisma.user.findFirst({
+      where: { id: data.assigneeId, workspaceId },
+    });
+    if (!assignee) {
+      throw AppError.badRequest(
+        "Invalid assignee: User not found in workspace",
+      );
+    }
+  }
+
   return prisma.assignmentRule.update({
     where: { id },
     data: {
@@ -127,6 +162,22 @@ export async function reorderRules(
   data: ReorderRulesInput,
   workspaceId: string,
 ) {
+  // Preload to verify all rules belong to the workspace
+  const ruleIds = data.rules.map((r) => r.id);
+  const existingRules = await prisma.assignmentRule.findMany({
+    where: {
+      id: { in: ruleIds },
+      workspaceId,
+    },
+    select: { id: true },
+  });
+
+  if (existingRules.length !== ruleIds.length) {
+    throw AppError.badRequest(
+      "One or more rules are invalid or do not belong to this workspace",
+    );
+  }
+
   const operations = data.rules.map((item) =>
     prisma.assignmentRule.update({
       where: { id: item.id },

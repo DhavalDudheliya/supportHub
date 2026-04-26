@@ -180,6 +180,7 @@ async function processClassification(
     tagId: string;
     ticketId: string;
     confidence: number;
+    workspaceId: string;
   }> = [];
 
   for (const tag of lowConfTags) {
@@ -189,6 +190,7 @@ async function processClassification(
         tagId: record.id,
         ticketId,
         confidence: tag.confidence,
+        workspaceId,
       });
     }
   }

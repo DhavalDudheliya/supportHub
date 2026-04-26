@@ -22,6 +22,16 @@ import { StatusChart } from "./status-chart";
 import { AgentChart } from "./agent-chart";
 import { TagsChart } from "./tags-chart";
 
+function formatPresetLabel(preset: DatePreset): string {
+  const map: Record<string, string> = {
+    "7d": "7 days",
+    "30d": "30 days",
+    "90d": "90 days",
+    "24h": "24 hours",
+  };
+  return map[preset] || preset;
+}
+
 export function ReportingPage() {
   const [preset, setPreset] = useState<DatePreset>("7d");
   const { from, to } = useMemo(() => presetToRange(preset), [preset]);
@@ -63,7 +73,7 @@ export function ReportingPage() {
           loading={loadingOverview}
           title="Total Tickets"
           value={overview?.total ?? 0}
-          description={`In the last ${preset}`}
+          description={`In the last ${formatPresetLabel(preset)}`}
           icon={TicketCheck}
         />
         <MetricCard
@@ -84,7 +94,7 @@ export function ReportingPage() {
           loading={loadingOverview}
           title="Avg. Resolution"
           value={
-            overview?.avgResolutionHours !== undefined
+            typeof overview?.avgResolutionHours === "number"
               ? `${overview.avgResolutionHours}h`
               : "—"
           }

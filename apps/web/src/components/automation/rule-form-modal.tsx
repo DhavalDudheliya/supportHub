@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, Zap, Users, Info, ArrowRight } from "lucide-react";
 import { cn } from "@supporthub/ui/lib/utils";
+import { toast } from "sonner";
 import {
   rulesService,
   type AssignmentRule,
@@ -89,6 +90,7 @@ export function RuleFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || conditions.length === 0) return;
+    if (strategy === "SPECIFIC" && !assigneeId) return;
 
     setSaving(true);
     try {
@@ -109,8 +111,11 @@ export function RuleFormModal({
       }
 
       onSave();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save rule:", err);
+      toast.error(
+        err.response?.data?.message || err.message || "Failed to save rule",
+      );
     } finally {
       setSaving(false);
     }
@@ -391,7 +396,12 @@ export function RuleFormModal({
             </Button>
             <Button
               type="submit"
-              disabled={saving || !name.trim() || conditions.length === 0}
+              disabled={
+                saving ||
+                !name.trim() ||
+                conditions.length === 0 ||
+                (strategy === "SPECIFIC" && !assigneeId)
+              }
             >
               {saving ? "Saving..." : rule ? "Update Rule" : "Create Rule"}
             </Button>

@@ -64,7 +64,7 @@ export function AssignmentRulesPage() {
     }),
   );
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -75,6 +75,9 @@ export function AssignmentRulesPage() {
       if (!old) return old;
       const oldIndex = old.findIndex((r) => r.id === active.id);
       const newIndex = old.findIndex((r) => r.id === over.id);
+
+      if (oldIndex === -1 || newIndex === -1) return old;
+
       newOrder = arrayMove(old, oldIndex, newIndex);
       return newOrder;
     });

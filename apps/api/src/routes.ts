@@ -11,7 +11,7 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import invitationRoutes from "./modules/invitation/invitation.routes.js";
 import customerRoutes from "./modules/customer/customer.routes.js";
 import ticketRoutes from "./modules/ticket/ticket.routes.js";
-import tagSuggestionRoutes from "./modules/ticket/tag-suggestions.routes.js";
+import tagSuggestionRoutes from "./modules/ticket/tag-suggestions/tag-suggestions.routes.js";
 import emailRoutes from "./modules/email/email.routes.js";
 import workspaceRoutes from "./modules/workspace/workspace.routes.js";
 import rulesRoutes from "./modules/rules/rules.routes.js";

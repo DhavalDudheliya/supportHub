@@ -17,9 +17,16 @@ CREATE TYPE "AssignmentStrategy" AS ENUM ('SPECIFIC', 'ROUND_ROBIN');
 -- DropIndex
 DROP INDEX "Tag_name_workspaceId_key";
 
--- AlterTable
-ALTER TABLE "Tag" ADD COLUMN     "category" "TagCategory" NOT NULL,
-ADD COLUMN     "isSystem" BOOLEAN NOT NULL DEFAULT false;
+-- AlterTable  (Step 1: add columns — category is nullable for now)
+ALTER TABLE "Tag"
+  ADD COLUMN "category" "TagCategory",
+  ADD COLUMN "isSystem" BOOLEAN NOT NULL DEFAULT false;
+
+-- Backfill existing rows with a sensible default category
+UPDATE "Tag" SET "category" = 'ISSUE_TYPE' WHERE "category" IS NULL;
+
+-- Step 3: now make the column required
+ALTER TABLE "Tag" ALTER COLUMN "category" SET NOT NULL;
 
 -- CreateTable
 CREATE TABLE "TagSuggestion" (

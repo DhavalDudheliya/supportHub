@@ -14,9 +14,9 @@ function parseDateRange(from?: string, to?: string) {
     ? new Date(from)
     : new Date(toDate.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  // Ensure "to" extends to end of day
-  toDate.setHours(23, 59, 59, 999);
-  fromDate.setHours(0, 0, 0, 0);
+  // Ensure "to" extends to end of UTC day
+  toDate.setUTCHours(23, 59, 59, 999);
+  fromDate.setUTCHours(0, 0, 0, 0);
 
   return { fromDate, toDate };
 }
@@ -98,7 +98,7 @@ export async function getVolume(
   while (cursor <= toDate) {
     const key = cursor.toISOString().split("T")[0]!;
     buckets[key] = 0;
-    cursor.setDate(cursor.getDate() + 1);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
 
   for (const ticket of tickets) {
@@ -170,7 +170,7 @@ export async function getAgentPerformance(
     .map((r) => {
       const agent = agentMap.get(r.assigneeId!);
       return {
-        agentId: r.assigneeId,
+        agentId: r.assigneeId!,
         name: agent ? `${agent.firstName} ${agent.lastName}` : "Unknown",
         count: r._count._all,
       };

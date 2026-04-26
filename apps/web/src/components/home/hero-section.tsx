@@ -69,24 +69,22 @@ export function HeroSection() {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start"
             >
-              <Link href="/register">
-                <Button
-                  size="lg"
-                  className="text-base px-8 gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow w-full sm:w-auto"
-                >
-                  Start Free Trial
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <a href="#how-it-works">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-base px-8 w-full sm:w-auto"
-                >
-                  See How It Works
-                </Button>
-              </a>
+              <Button
+                render={<Link href="/register" />}
+                size="lg"
+                className="text-base px-8 gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow w-full sm:w-auto"
+              >
+                Start Free Trial
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button
+                render={<a href="#how-it-works" />}
+                size="lg"
+                variant="outline"
+                className="text-base px-8 w-full sm:w-auto"
+              >
+                See How It Works
+              </Button>
             </motion.div>
 
             <motion.p

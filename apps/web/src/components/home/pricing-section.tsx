@@ -141,17 +141,16 @@ export function PricingSection() {
               </ul>
 
               {/* CTA */}
-              <Link href={tier.ctaHref}>
-                <Button
-                  variant={tier.highlighted ? "default" : "outline"}
-                  className={cn(
-                    "w-full",
-                    tier.highlighted && "shadow-md shadow-primary/20",
-                  )}
-                >
-                  {tier.cta}
-                </Button>
-              </Link>
+              <Button
+                render={<Link href={tier.ctaHref} />}
+                variant={tier.highlighted ? "default" : "outline"}
+                className={cn(
+                  "w-full",
+                  tier.highlighted && "shadow-md shadow-primary/20",
+                )}
+              >
+                {tier.cta}
+              </Button>
             </motion.div>
           ))}
         </div>

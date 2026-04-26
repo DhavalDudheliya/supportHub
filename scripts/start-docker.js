@@ -24,7 +24,7 @@ function startDocker() {
 
 if (isDockerRunning()) {
   console.log("Docker is already running. Starting containers...");
-  execSync("docker-compose up -d", { stdio: "inherit" });
+  execSync("docker compose up -d", { stdio: "inherit" });
   process.exit(0);
 }
 
@@ -38,7 +38,7 @@ const maxAttempts = 30;
 const interval = setInterval(() => {
   if (isDockerRunning()) {
     console.log("Docker is ready! Starting containers...");
-    execSync("docker-compose up -d", { stdio: "inherit" });
+    execSync("docker compose up -d", { stdio: "inherit" });
     clearInterval(interval);
     process.exit(0);
   }
