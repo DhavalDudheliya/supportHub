@@ -24,13 +24,25 @@ async function main() {
     `Seeding data for workspace: ${workspace.company} (${workspace.id})`,
   );
 
-  // 1. Seed System Tags (uses the predefined tag vocabulary)
-  const { seedSystemTags } = await import("./seed-tags.js");
-  await seedSystemTags(workspace.id);
-  const tags = await prisma.tag.findMany({
-    where: { workspaceId: workspace.id },
-  });
-  console.log(`Seeded ${tags.length} system tags.`);
+  // 1. Create Tags
+  const tagNames = [
+    "Billing",
+    "Technical",
+    "Bug",
+    "Feature Request",
+    "Account",
+    "Urgent",
+  ];
+  const tags = await Promise.all(
+    tagNames.map((name) =>
+      prisma.tag.upsert({
+        where: { name_workspaceId: { name, workspaceId: workspace.id } },
+        update: {},
+        create: { name, workspaceId: workspace.id },
+      }),
+    ),
+  );
+  console.log(`Created ${tags.length} tags.`);
 
   // 2. Create Customers
   const numCustomers = 15;

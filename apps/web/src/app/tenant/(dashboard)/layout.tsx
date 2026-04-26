@@ -8,7 +8,6 @@ import { Loading } from "@supporthub/ui/components/loading";
 
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
-import { useTicketRealtime } from "@/hooks/use-ticket-realtime";
 
 import AppHeader from "@/components/core/app-header";
 import AppSidebar from "@/components/core/app-sidebar";
@@ -21,9 +20,6 @@ import AppSidebar from "@/components/core/app-sidebar";
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-
-  // Enable global real-time notifications and cache invalidations
-  useTicketRealtime();
 
   React.useEffect(() => {
     // Middleware handles most redirects, but client-side guard is still needed

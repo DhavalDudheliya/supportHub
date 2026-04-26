@@ -15,7 +15,6 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1028.0",
     "@azure/msal-node": "^5.1.1",
-    "@google/genai": "^1.50.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.1",

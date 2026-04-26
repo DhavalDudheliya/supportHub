@@ -28,7 +28,6 @@ import logger, { colors, statusColor } from "./lib/logger.js";
 import routes from "./routes.js";
 import { initSocketIO } from "./lib/socket.js";
 import { startEmailWorker } from "./workers/email.worker.js";
-import { startAIClassificationWorker } from "./workers/ai-classification.worker.js";
 import { startRenewalCron } from "./cron/renewal.cron.js";
 import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
 import { notFoundHandler } from "./middlewares/not-found.middleware.js";
@@ -81,7 +80,6 @@ initSocketIO(server);
 
 // --- Start Background Workers ---
 startEmailWorker();
-startAIClassificationWorker();
 
 // --- Start Cron Jobs ---
 startRenewalCron();

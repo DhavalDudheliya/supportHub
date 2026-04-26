@@ -154,7 +154,6 @@ async function processGmailJob(data: EmailJobData): Promise<void> {
         inReplyTo: parsed.inReplyTo,
         date: parsed.date,
         workspaceId,
-        emailAccountId: account.id,
       });
     } catch (err) {
       logger.error(
@@ -222,7 +221,6 @@ async function processOutlookJob(data: EmailJobData): Promise<void> {
         inReplyTo: parsed.inReplyTo,
         date: parsed.date,
         workspaceId,
-        emailAccountId: account.id,
       });
     } catch (err) {
       logger.error(

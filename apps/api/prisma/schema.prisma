@@ -34,7 +34,6 @@ model User {
   invitationsSent    Invitation[] /// Invitations sent by this user
   assignedTickets    Ticket[] /// Tickets assigned to this user
   comments           TicketComment[] /// Comments authored by this user
-  assignmentRules    AssignmentRule[] @relation("RuleAssignee") /// Rules targeting this user
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 }
@@ -46,18 +45,15 @@ model Workspace {
   subdomain     String          @unique /// URL-safe subdomain identifier, e.g. "acmecorp"
   company       String /// Original company name provided at registration
   users         User[] /// All users belonging to this workspace
-  invitations     Invitation[] /// Invitations for this workspace
-  customers       Customer[] /// External customers in this workspace
-  tickets         Ticket[] /// All tickets in this workspace
-  tags            Tag[] /// Tags for categorization
-  tagSuggestions  TagSuggestion[] /// AI-suggested tags pending review
-  emailAccounts   EmailAccount[] /// Connected email accounts (Gmail / Outlook)
-  emailMessages   EmailMessage[] /// Processed inbound email records
-  theme           WorkspaceTheme? /// White-label branding configuration
-  assignmentRules AssignmentRule[] /// Admin-configured assignment rules
-  aiDecisionLogs  AIDecisionLog[] /// AI classification audit trail
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  invitations   Invitation[] /// Invitations for this workspace
+  customers     Customer[] /// External customers in this workspace
+  tickets       Ticket[] /// All tickets in this workspace
+  tags          Tag[] /// Tags for categorization
+  emailAccounts EmailAccount[] /// Connected email accounts (Gmail / Outlook)
+  emailMessages EmailMessage[] /// Processed inbound email records
+  theme         WorkspaceTheme? /// White-label branding configuration
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 }
 
 /// Role-based access control enum.
@@ -120,14 +116,12 @@ model Ticket {
   assigneeId    String?
   assignee      User?           @relation(fields: [assigneeId], references: [id])
   workspaceId   String
-  workspace       Workspace       @relation(fields: [workspaceId], references: [id])
-  comments        TicketComment[]
-  tags            Tag[]
-  tagSuggestions  TagSuggestion[] /// AI-suggested tags pending agent review
-  emailMessages   EmailMessage[] /// Associated inbound email records
-  aiDecisionLogs  AIDecisionLog[] /// AI classification audit trail
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id])
+  comments      TicketComment[]
+  tags          Tag[]
+  emailMessages EmailMessage[] /// Associated inbound email records
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
   @@unique([ticketNumber, workspaceId])
 }
@@ -144,112 +138,15 @@ model TicketComment {
   createdAt  DateTime @default(now())
 }
 
-/// Tag category enum — each tag belongs to exactly one category.
-enum TagCategory {
-  ISSUE_TYPE /// Bug, Feature request, Question, Complaint, etc.
-  DEPARTMENT /// Billing, Technical support, Sales, Legal, etc.
-  PRODUCT_AREA /// Mobile app, Web app, API, Integrations, etc.
-  SENTIMENT /// Angry, Frustrated, Neutral, Satisfied, Urgent tone
-  SLA /// SLA breach risk, VIP customer, First response due
-}
-
 /// Tag for categorizing tickets within a workspace.
-/// Tags are grouped into categories with a controlled vocabulary.
 model Tag {
-  id          String        @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
-  category    TagCategory /// Which category this tag belongs to
-  isSystem    Boolean       @default(false) /// true = predefined, cannot be deleted
   workspaceId String
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
   tickets     Ticket[]
-  suggestions TagSuggestion[] /// AI suggestions referencing this tag
 
-  @@unique([name, category, workspaceId])
-}
-
-/// AI-suggested tag for a ticket — pending agent review.
-/// Created when the AI's confidence is below the 70% threshold.
-model TagSuggestion {
-  id          String           @id @default(uuid())
-  tagId       String
-  tag         Tag              @relation(fields: [tagId], references: [id])
-  ticketId    String
-  ticket      Ticket           @relation(fields: [ticketId], references: [id])
-  confidence  Float /// 0.0–1.0 confidence score from Gemini
-  status      SuggestionStatus @default(PENDING)
-  reviewedBy  String? /// userId who accepted/rejected
-  workspaceId String
-  workspace   Workspace        @relation(fields: [workspaceId], references: [id])
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  @@unique([workspaceId, tagId, ticketId])
-}
-
-enum SuggestionStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-}
-
-/// Admin-configured rule for auto-assigning tickets based on tags.
-/// Rules are evaluated in priority order — first match wins.
-model AssignmentRule {
-  id         String             @id @default(uuid())
-  name       String /// Human-readable label, e.g. "Billing tickets"
-  priority   Int /// Execution order — lower = evaluated first
-  isEnabled  Boolean            @default(true)
-
-  /// JSON: { operator: "AND"|"OR", conditions: [{ category, tagName }] }
-  conditions Json
-
-  /// Assignment target
-  assigneeId String? /// Specific agent (nullable if round-robin)
-  assignee   User?              @relation("RuleAssignee", fields: [assigneeId], references: [id])
-  strategy   AssignmentStrategy @default(SPECIFIC)
-
-  /// Optional actions alongside assignment
-  setPriority TicketPriority? /// Override ticket priority
-  flagUrgent  Boolean          @default(false)
-
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-enum AssignmentStrategy {
-  SPECIFIC /// Assign to a named agent
-  ROUND_ROBIN /// Distribute evenly across workspace agents
-}
-
-/// Audit log for every AI classification decision.
-/// Stores what the AI returned, which tags were applied/suggested,
-/// and which assignment rule fired.
-model AIDecisionLog {
-  id            String          @id @default(uuid())
-  ticketId      String
-  ticket        Ticket          @relation(fields: [ticketId], references: [id])
-
-  /// AI output
-  rawResponse   Json /// Full Gemini response for debugging
-  tagsApplied   Json /// [{ name, category, confidence }]
-  tagsSuggested Json /// [{ name, category, confidence }] (below threshold)
-  prioritySet   TicketPriority? /// Priority determined by the AI
-
-  /// Assignment result
-  ruleId     String? /// Which rule matched
-  ruleName   String? /// Snapshot of rule name at time of decision
-  assigneeId String? /// Who the ticket was assigned to
-
-  /// Performance
-  processingMs Int /// How long the Gemini call took
-  modelVersion String /// e.g. "gemini-2.0-flash"
-
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  createdAt   DateTime  @default(now())
+  @@unique([name, workspaceId])
 }
 
 enum TicketStatus {

@@ -1,7 +1,6 @@
 "use client";
 
 import { type Ticket } from "@/lib/services/ticket.service";
-import { TagSuggestions } from "./tag-suggestions";
 import { Avatar, AvatarFallback } from "@supporthub/ui/components/avatar";
 import { Badge } from "@supporthub/ui/components/badge";
 import {
@@ -147,12 +146,6 @@ export function TicketPropertiesSidebar({
           )}
         </div>
       </div>
-
-      {/* AI Tag Suggestions */}
-      <TagSuggestions
-        ticketId={ticket.id}
-        onTagAccepted={() => onUpdateProperty("_refresh", true)}
-      />
     </aside>
   );
 }
