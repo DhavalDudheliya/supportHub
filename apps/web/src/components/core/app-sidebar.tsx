@@ -34,7 +34,7 @@ const mainNavItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: TicketCheck, label: "Tickets", href: "/tickets" },
   { icon: Users, label: "Customers", href: "/customers" },
-  { icon: BarChart3, label: "Reporting", href: "/reporting" },
+  { icon: BarChart3, label: "Reporting", href: "/reporting", adminOnly: true },
   { icon: Zap, label: "Automation", href: "/automation", adminOnly: true },
 ];
 
