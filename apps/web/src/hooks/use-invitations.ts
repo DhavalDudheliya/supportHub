@@ -9,6 +9,13 @@ export function usePendingInvitations() {
   });
 }
 
+export function useTeamAgents() {
+  return useQuery({
+    queryKey: queryKeys.invitations.team(),
+    queryFn: invitationService.getTeamAgents,
+  });
+}
+
 export function useInviteAgent() {
   const queryClient = useQueryClient();
 
@@ -17,6 +24,9 @@ export function useInviteAgent() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.invitations.pending(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.invitations.team(),
       });
     },
   });

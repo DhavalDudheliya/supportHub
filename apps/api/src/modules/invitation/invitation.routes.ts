@@ -13,6 +13,7 @@ router.use(authMiddleware);
 // Admin routes for managing invitations
 router.post("/", invitationController.inviteAgent);
 router.get("/", invitationController.getInvitations);
+router.get("/team", invitationController.getTeamAgents);
 router.delete("/:id", invitationController.revokeInvitation);
 
 export default router;

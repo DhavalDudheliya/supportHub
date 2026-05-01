@@ -11,6 +11,14 @@ export interface Invitation {
   createdAt: string;
 }
 
+export interface TeamAgent {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+}
+
 export const invitationService = {
   /**
    * Invites a new agent to the workspace.
@@ -29,6 +37,15 @@ export const invitationService = {
    */
   async getPendingInvitations(): Promise<Invitation[]> {
     const response = await api.get("/invitations");
+    return response.data;
+  },
+
+  /**
+   * Retrieves agents in the current workspace who have already joined.
+   * Admin only.
+   */
+  async getTeamAgents(): Promise<TeamAgent[]> {
+    const response = await api.get("/invitations/team");
     return response.data;
   },
 

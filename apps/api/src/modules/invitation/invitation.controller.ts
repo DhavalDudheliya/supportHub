@@ -51,6 +51,20 @@ export async function getInvitations(req: Request, res: Response) {
   res.status(200).json(invitations);
 }
 
+export async function getTeamAgents(req: Request, res: Response) {
+  const authReq = req as AuthenticatedRequest;
+
+  if (authReq.user?.role !== "ADMIN") {
+    throw AppError.forbidden("Only admins can view team agents");
+  }
+
+  const agents = await invitationService.getTeamAgents(
+    authReq.user.workspaceId,
+  );
+
+  res.status(200).json(agents);
+}
+
 export async function revokeInvitation(req: Request, res: Response) {
   const authReq = req as AuthenticatedRequest;
   const id = req.params.id as string;

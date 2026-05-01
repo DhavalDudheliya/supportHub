@@ -31,11 +31,7 @@ const inviteSchema = z.object({
 
 type InviteFormValues = z.infer<typeof inviteSchema>;
 
-export function InviteAgentDialog({
-  onInviteSuccess,
-}: {
-  onInviteSuccess: () => void;
-}) {
+export function InviteAgentDialog() {
   const [open, setOpen] = useState(false);
   const inviteMutation = useInviteAgent();
   const loading = inviteMutation.isPending;
@@ -58,7 +54,6 @@ export function InviteAgentDialog({
         toast.success("Invitation sent successfully");
         reset();
         setOpen(false);
-        onInviteSuccess();
       },
       onError: (error: any) => {
         toast.error(error.response?.data?.error || "Failed to send invitation");

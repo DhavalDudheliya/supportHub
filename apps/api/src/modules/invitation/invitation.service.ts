@@ -88,6 +88,23 @@ export async function getPendingInvitations(workspaceId: string) {
   });
 }
 
+export async function getTeamAgents(workspaceId: string) {
+  return await prisma.user.findMany({
+    where: {
+      workspaceId,
+      role: "AGENT",
+    },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 export async function revokeInvitation(
   invitationId: string,
   workspaceId: string,

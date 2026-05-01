@@ -1,28 +1,21 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
 import {
   usePendingInvitations,
   useRevokeInvitation,
+  useTeamAgents,
 } from "@/hooks/use-invitations";
-import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/query-keys";
 import { toast } from "sonner";
 
 import { TeamSettingsHeader } from "@/components/settings/team/team-settings-header";
 import { PendingInvitationsCard } from "@/components/settings/team/pending-invitations-card";
+import { TeamAgentsCard } from "@/components/settings/team/team-agents-card";
 
 export function TeamSettingsPage() {
-  const queryClient = useQueryClient();
   const { data: invitations = [], isLoading: loading } =
     usePendingInvitations();
+  const { data: agents = [], isLoading: loadingAgents } = useTeamAgents();
   const revokeMutation = useRevokeInvitation();
-
-  const fetchInvitations = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.invitations.pending(),
-    });
-  }, [queryClient]);
 
   const handleRevoke = (id: string) => {
     revokeMutation.mutate(id, {
@@ -39,7 +32,8 @@ export function TeamSettingsPage() {
 
   return (
     <div className="flex-1 space-y-6 p-8 max-w-5xl mx-auto">
-      <TeamSettingsHeader onInviteSuccess={fetchInvitations} />
+      <TeamSettingsHeader />
+      <TeamAgentsCard agents={agents} loading={loadingAgents} />
       <PendingInvitationsCard
         invitations={invitations}
         loading={loading}

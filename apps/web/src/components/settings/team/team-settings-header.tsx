@@ -1,13 +1,7 @@
 import { Users } from "lucide-react";
 import { InviteAgentDialog } from "@/components/team/invite-agent-dialog";
 
-interface TeamSettingsHeaderProps {
-  onInviteSuccess: () => void;
-}
-
-export function TeamSettingsHeader({
-  onInviteSuccess,
-}: TeamSettingsHeaderProps) {
+export function TeamSettingsHeader() {
   return (
     <div className="flex items-center justify-between border-b pb-4">
       <div>
@@ -20,7 +14,7 @@ export function TeamSettingsHeader({
         </p>
       </div>
       <div>
-        <InviteAgentDialog onInviteSuccess={onInviteSuccess} />
+        <InviteAgentDialog />
       </div>
     </div>
   );

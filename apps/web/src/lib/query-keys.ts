@@ -37,6 +37,7 @@ export const queryKeys = {
   invitations: {
     all: ["invitations"] as const,
     pending: () => [...queryKeys.invitations.all, "pending"] as const,
+    team: () => [...queryKeys.invitations.all, "team"] as const,
   },
 
   // ── Reports ──
