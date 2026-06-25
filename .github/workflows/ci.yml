@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run typecheck
+      # NOTE: repo-wide `pnpm lint` is intentionally not gated here yet.
+      # `apps/web` still uses `next lint` (removed in Next 16) and the web app
+      # is already linted/built by Vercel on every PR. Re-add once web migrates
+      # to the ESLint CLI.
+
+  smoke:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    env:
+      # Dummy values — /api/health touches neither DB nor Redis at request time,
+      # but the app needs them present to boot. Redis is the real service above.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+      PORT: 5000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Compile exactly as production does (prisma generate + tsc).
+      - run: pnpm --filter api build
+      # Boot the COMPILED output and assert it serves /api/health.
+      # This is the gate that catches runtime-only bugs (bad entry path,
+      # extensionless ESM imports) that tsc/lint do not.
+      - name: Smoke test — boot API and hit /api/health
+        run: |
+          node apps/api/dist/src/index.js &
+          PID=$!
+          ok=0
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:5000/api/health >/dev/null 2>&1; then
+              ok=1; break
+            fi
+            sleep 2
+          done
+          kill $PID 2>/dev/null || true
+          if [ "$ok" != "1" ]; then
+            echo "::error::API did not become healthy within ~40s"
+            exit 1
+          fi
+          echo "API booted and /api/health responded OK."
