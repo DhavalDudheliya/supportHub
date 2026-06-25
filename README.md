@@ -4,7 +4,7 @@ A modern, multi-tenant customer support platform that converts inbound emails in
 
 ## Features
 
-- **Multi-Tenant Workspaces** — Isolated workspaces per organization with subdomain-based routing
+- **Multi-Tenant Workspaces** — Isolated workspaces per organization with subdomain-based routing.
 - **Email-to-Ticket Pipeline** — Gmail & Outlook OAuth integration that silently converts inbound emails into support tickets
 - **Real-Time Dashboard** — WebSocket-powered live updates; new tickets and replies appear instantly
 - **Intelligent Threading** — Replies are automatically matched to existing tickets using RFC 2822 Message-ID headers
