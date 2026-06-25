@@ -40,4 +40,5 @@ EXPOSE 5000
 
 # B2 "self-migrating image": apply DB migrations, then start the server.
 # `migrate deploy` is idempotent, so re-running on restart is safe.
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+# tsc preserves the src/ folder, so the entry point is dist/src/index.js.
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/index.js"]
