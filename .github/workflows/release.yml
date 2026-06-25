@@ -53,10 +53,42 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 20m # slow box: 1GB image pull + migrate + boot
           script: |
             set -e
             cd ~/deploy
+            IMAGE=ghcr.io/${{ github.repository_owner }}/supporthub-api
+
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Remember the image currently tagged :latest so we can roll back.
+            # Empty on the very first deploy.
+            PREV=$(docker inspect --format '{{.Id}}' "$IMAGE:latest" 2>/dev/null || true)
+
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
+
+            # Health-gate: poll /api/health for up to ~150s.
+            ok=0
+            for i in $(seq 1 30); do
+              if curl -fsS http://localhost:5000/api/health >/dev/null 2>&1; then
+                ok=1; break
+              fi
+              sleep 5
+            done
+
+            if [ "$ok" != "1" ]; then
+              echo "::error::Health check failed after deploy."
+              docker compose -f docker-compose.prod.yml logs --tail=50 api || true
+              if [ -n "$PREV" ]; then
+                echo "Rolling back to previous image ($PREV)..."
+                docker tag "$PREV" "$IMAGE:latest"
+                docker compose -f docker-compose.prod.yml up -d
+              else
+                echo "No previous image to roll back to (first deploy)."
+              fi
+              exit 1
+            fi
+
+            echo "Deploy healthy."
             docker image prune -f
