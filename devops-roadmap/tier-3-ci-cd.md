@@ -22,6 +22,21 @@ validation against an ephemeral Postgres service, Docker build & push to GitHub 
 (GHCR), branch protections, a deploy job (manual/`workflow_dispatch` or to a free host).
 **Out:** full e2e test suite (none exists yet — note as a follow‑up), production cloud account.
 
+## Status (as of 2026-06-25)
+
+**Live:** automated backend deploys are working end-to-end — push to `main` builds the API
+image on GitHub runners, pushes to GHCR (`sha` + `latest` tags, GHA build cache), then SSH-deploys
+to EC2 (`docker compose pull && up -d`) with a **self-migrating container** (`prisma migrate deploy`
+on boot) and a **health-gated deploy with automatic rollback** to the previous image if
+`/api/health` doesn't come up. Secrets live in GitHub Actions (SSH key, GHCR PAT) and in `~/deploy/.env`
+on the box. Redis and Postgres are managed/hosted (not in compose).
+
+**Still open:** the CI quality gate (#1), the ephemeral-Postgres migration check (#2), and repo
+hygiene (#5). Notably there is **no pre-deploy lint/typecheck/test gate yet** — which is how two
+runtime bugs reached prod before being caught (the `dist/src/index.js` entry path and an
+extensionless Prisma client ESM import). Closing #1 is the next priority. Hardening follow-ups
+tracked in T5: replace SSH-open-to-`0.0.0.0/0` with SSM, shrink the ~1GB image / use same-region ECR.
+
 ## Plan / tasks
 
 1. **`[ ]` CI workflow** — `.github/workflows/ci.yml`, on `push`/`pull_request`:
@@ -32,18 +47,20 @@ validation against an ephemeral Postgres service, Docker build & push to GitHub 
 2. **`[ ]` Migration check job** — spin up `services: postgres:16-alpine`, run
    `pnpm --filter api exec prisma migrate deploy` against it to prove migrations apply from clean, and
    `prisma migrate diff`/`migrate status` to catch drift (schema vs migrations).
-3. **`[ ]` Image build & push** — `.github/workflows/release.yml`, on tag/`main`:
+3. **`[x]` Image build & push** — `.github/workflows/release.yml`, on `main`/`workflow_dispatch`:
+   (done for `apps/api`; `apps/web` is on Vercel so not imaged. Multi-arch not enabled.)
    - `docker/setup-buildx-action`, `docker/login-action` (GHCR, `GITHUB_TOKEN`),
      `docker/build-push-action` for `apps/api` and `apps/web`.
    - Tag images with `sha`, `latest`, and semver; enable build cache (`cache-from/to: type=gha`).
    - (Optional) multi‑arch `linux/amd64,linux/arm64`.
-4. **`[ ]` Deploy job** — gated behind `environment: production` (manual approval). Target a free host
-   (Render/Railway/Fly free tier) or just `workflow_dispatch` that runs `prisma migrate deploy` then
-   restarts services. Health‑gate on `GET /api/health`.
+4. **`[x]` Deploy job** — SSH-deploys to EC2, self-migrates (`prisma migrate deploy` in the container
+   `CMD`), and **health-gates on `GET /api/health` with automatic rollback** to the previous image.
+   (Not yet behind an `environment: production` manual-approval gate — follow-up.)
 5. **`[ ]` Repo hygiene** — branch protection requiring CI green; status badges in the root README;
    Dependabot/`pnpm audit` step.
-6. **`[ ]` Secrets** — store `DATABASE_URL`, JWT/encryption keys, OAuth creds as GitHub Actions secrets;
-   never in the image.
+6. **`[x]` Secrets** — runtime secrets (`DATABASE_URL`, `REDIS_URL`, JWT/encryption keys, OAuth creds)
+   live in `~/deploy/.env` on the box (never baked into the image); CI secrets (SSH key, GHCR PAT)
+   in GitHub Actions.
 
 ## Pipeline shape
 

@@ -82,6 +82,9 @@ export function DataTable<TData, TValue>({
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
+  // TanStack Table intentionally returns non-memoizable functions; the React
+  // Compiler warning here is a known incompatibility, not a real issue.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
