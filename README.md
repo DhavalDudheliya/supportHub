@@ -19,18 +19,19 @@ A modern, multi-tenant customer support platform that converts inbound emails in
 
 ## Tech Stack
 
-| Layer            | Technology                                                 |
-| ---------------- | ---------------------------------------------------------- |
-| **Frontend**     | Next.js 16, React 19, Tailwind CSS v4, shadcn/ui           |
-| **Backend**      | Express 5, TypeScript, Socket.IO                           |
-| **Database**     | PostgreSQL, Prisma ORM (v7)                                |
-| **Job Queue**    | BullMQ, Redis (via Docker)                                 |
-| **Auth**         | JWT (access + refresh tokens), bcrypt                      |
-| **Email**        | Gmail API (Google Pub/Sub), Microsoft Graph API (Webhooks) |
-| **Validation**   | Zod (shared across frontend & backend)                     |
-| **Monorepo**     | Turborepo, pnpm workspaces                                 |
-| **Code Quality** | ESLint, Prettier, Husky, lint-staged                       |
-| **Logging**      | Pino (with pino-pretty for dev)                            |
+| Layer            | Technology                                                                                   |
+| ---------------- | -------------------------------------------------------------------------------------------- |
+| **Frontend**     | Next.js 16, React 19, Tailwind CSS v4, shadcn/ui                                             |
+| **Backend**      | Express 5, TypeScript, Socket.IO                                                             |
+| **Database**     | PostgreSQL via Prisma ORM (v7) — local Docker/Postgres · prod: Prisma Postgres               |
+| **Job Queue**    | BullMQ + Redis — local: Docker · prod: managed Redis (TLS)                                   |
+| **Auth**         | JWT (access + refresh tokens), bcrypt                                                        |
+| **Email**        | Gmail API (Google Pub/Sub), Microsoft Graph API (Webhooks)                                   |
+| **Validation**   | Zod (shared across frontend & backend)                                                       |
+| **Monorepo**     | Turborepo, pnpm workspaces                                                                   |
+| **Code Quality** | ESLint, Prettier, Husky, lint-staged                                                         |
+| **Logging**      | Pino (with pino-pretty for dev)                                                              |
+| **CI/CD**        | GitHub Actions, GHCR, Docker — API → EC2, Web → Vercel ([details](./docs/CI-CD-PIPELINE.md)) |
 
 ## Prerequisites
 
