@@ -38,8 +38,8 @@ A modern, multi-tenant customer support platform that converts inbound emails in
 - **pnpm** ≥ 10.4
 - **Docker** (for Redis)
 - **PostgreSQL** database
-- **Google Cloud** project (for Gmail integration) — [setup guide](./SETUP_EMAIL_SERVICES.md#1-google-cloud-gmail-api)
-- **Microsoft Azure** app registration (for Outlook integration) — [setup guide](./SETUP_EMAIL_SERVICES.md#2-microsoft-azure-outlook--microsoft-graph)
+- **Google Cloud** project (for Gmail integration) — [setup guide](./docs/SETUP_EMAIL_SERVICES.md#1-google-cloud-gmail-api)
+- **Microsoft Azure** app registration (for Outlook integration) — [setup guide](./docs/SETUP_EMAIL_SERVICES.md#2-microsoft-azure-outlook--microsoft-graph)
 
 ## Getting Started
 
@@ -116,7 +116,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5000/api
 > node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 > ```
 
-For detailed OAuth setup instructions, see [**SETUP_EMAIL_SERVICES.md**](./SETUP_EMAIL_SERVICES.md).
+For detailed OAuth setup instructions, see [**SETUP_EMAIL_SERVICES.md**](./docs/SETUP_EMAIL_SERVICES.md).
 
 ### 5. Set up the database
 
@@ -202,6 +202,24 @@ pnpm dev:api    # Backend only
 7. **Thread** — References headers are matched to existing tickets for reply detection
 8. **Create** — A new ticket is created (or a reply is appended to an existing one)
 9. **Notify** — WebSocket event is emitted to the live dashboard
+
+## Deployment & CI/CD
+
+- **Frontend** auto-deploys to **Vercel** on every push.
+- **Backend** auto-deploys to **EC2** via GitHub Actions: push to `main` builds a Docker image
+  on GitHub runners, pushes it to **GHCR**, then deploys to the box with a **health-gated, self-rolling-back**
+  release. Pull requests are gated by CI (typecheck + a runtime smoke test).
+
+📖 **Full pipeline documentation:** [`docs/CI-CD-PIPELINE.md`](./docs/CI-CD-PIPELINE.md)
+
+## Documentation
+
+| Doc                                                                                  | What it covers                           |
+| ------------------------------------------------------------------------------------ | ---------------------------------------- |
+| [CI/CD Pipeline](./docs/CI-CD-PIPELINE.md)                                           | End-to-end build, ship, and deploy flow  |
+| [Email Services Setup](./docs/SETUP_EMAIL_SERVICES.md)                               | Gmail / Outlook OAuth configuration      |
+| [Email-to-Ticket System](<./docs/Gmail & Outlook Inbound Email to Ticket System.md>) | Inbound email → ticket design notes      |
+| [DevOps Roadmap](./devops-roadmap/README.md)                                         | Phased DevOps & distributed-systems plan |
 
 ## License
 
