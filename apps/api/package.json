@@ -4,13 +4,13 @@
   "description": "SupportHub backend API",
   "type": "module",
   "private": true,
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "prisma:generate": "pnpm exec prisma generate",
     "build": "pnpm run prisma:generate && tsc -p tsconfig.build.json",
     "build:prod": "pnpm run prisma:generate && node --max-old-space-size=1536 ./node_modules/typescript/bin/tsc -p tsconfig.build.json",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "typecheck": "tsc --noEmit",
     "seed": "dotenv -e .env -- tsx src/scripts/seed.ts"
   },
