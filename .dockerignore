@@ -1,0 +1,19 @@
+# Rebuilt inside the image — never ship the local copies.
+**/node_modules
+**/dist
+**/generated
+**/.turbo
+
+# VCS & local tooling
+.git
+.husky
+.vscode
+
+# Secrets must come from runtime env, never the image.
+**/.env
+**/.env.*
+
+# Docs / design assets not needed in the build context
+design_ss
+devops-roadmap
+*.md
