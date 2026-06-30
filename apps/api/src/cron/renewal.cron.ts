@@ -59,7 +59,19 @@ export function startRenewalCron(): void {
     const token = randomUUID();
 
     // Try to become the leader for this tick. `NX` => set only if absent.
-    const acquired = await redis.set(LOCK_KEY, token, "PX", LOCK_TTL_MS, "NX");
+    // A Redis error here must degrade to a logged, skipped tick — not an
+    // unhandled rejection escaping the async cron callback.
+    let acquired: string | null;
+    try {
+      acquired = await redis.set(LOCK_KEY, token, "PX", LOCK_TTL_MS, "NX");
+    } catch (err) {
+      logger.error(
+        { err },
+        "Renewal cron tick skipped — failed to acquire lock (Redis error)",
+      );
+      return;
+    }
+
     if (acquired !== "OK") {
       logger.info(
         "Renewal cron tick skipped — another instance holds the lock",

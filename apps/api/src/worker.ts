@@ -21,6 +21,7 @@ import "dotenv/config";
 import logger from "./lib/logger.js";
 import redis from "./lib/redis.js";
 import prisma from "./lib/prisma.js";
+import { closeSocketRedis } from "./lib/socket.js";
 import { startEmailWorker, stopEmailWorker } from "./workers/email.worker.js";
 import {
   startAIClassificationWorker,
@@ -48,6 +49,9 @@ async function shutdown(signal: string): Promise<void> {
 
   try {
     await Promise.allSettled([stopEmailWorker(), stopAIClassificationWorker()]);
+    // Close the Socket.IO emitter pub connection (if any event was emitted),
+    // then the main Redis connection.
+    await closeSocketRedis();
     await Promise.allSettled([redis.quit(), prisma.$disconnect()]);
     logger.info("Worker shutdown complete");
     process.exit(0);

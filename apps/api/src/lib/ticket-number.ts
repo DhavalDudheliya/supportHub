@@ -37,13 +37,25 @@ export async function peekNextTicketNumber(
 /**
  * Duck-typed check for a Prisma unique-constraint violation on `ticketNumber`.
  * We avoid importing the Prisma error class (matches `error-handler.middleware.ts`).
+ *
+ * `meta.target` may be an array of field names (`["ticketNumber","workspaceId"]`)
+ * or a string constraint name (`"Ticket_ticketNumber_workspaceId_key"`) depending
+ * on the Prisma version/adapter. We only treat it as a ticketNumber conflict when
+ * the target clearly references `ticketNumber` — crucially NOT for a duplicate
+ * email's P2002 on `[messageId, workspaceId]`, which must propagate so the
+ * caller's dedup (or BullMQ retry) handles it instead of being retried here.
+ * On an unknown/absent target shape we return false (don't blindly retry).
  */
 function isTicketNumberConflict(err: unknown): boolean {
   if (typeof err !== "object" || err === null || !("code" in err)) return false;
   if ((err as Record<string, unknown>).code !== "P2002") return false;
   const target = (err as { meta?: { target?: unknown } }).meta?.target;
-  // target is typically ["ticketNumber", "workspaceId"]; if absent, retry anyway.
-  return Array.isArray(target) ? target.includes("ticketNumber") : true;
+  const targetStr = Array.isArray(target)
+    ? target.join(",")
+    : typeof target === "string"
+      ? target
+      : "";
+  return targetStr.includes("ticketNumber");
 }
 
 /**
@@ -57,19 +69,19 @@ export async function createWithTicketNumber<T>(
   workspaceId: string,
   create: (ticketNumber: number) => Promise<T>,
 ): Promise<T> {
+  let lastConflict: unknown;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const ticketNumber = await peekNextTicketNumber(workspaceId);
     try {
       return await create(ticketNumber);
     } catch (err) {
-      if (isTicketNumberConflict(err) && attempt < MAX_ATTEMPTS) {
-        continue; // another writer took this number — recompute and retry
-      }
-      throw err;
+      // Any non-ticketNumber error (incl. a duplicate-email P2002) propagates.
+      if (!isTicketNumberConflict(err)) throw err;
+      // Lost the race for this number — remember it and recompute on next loop.
+      lastConflict = err;
     }
   }
-  // Unreachable: the loop either returns or throws on the last attempt.
-  throw new Error(
-    `Failed to allocate a unique ticketNumber for workspace ${workspaceId} after ${MAX_ATTEMPTS} attempts`,
-  );
+  // Exhausted retries: surface the original P2002 so the global error handler
+  // still maps it to a 409 (rather than masking it as a generic 500).
+  throw lastConflict;
 }

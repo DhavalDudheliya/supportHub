@@ -15,11 +15,19 @@ import { Server as HttpServer } from "http";
 import { Server, Socket } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { Emitter } from "@socket.io/redis-emitter";
+import type { Redis } from "ioredis";
 import redis from "./redis.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 import logger from "./logger.js";
 
 let io: Server;
+
+// Dedicated pub/sub connections opened via redis.duplicate() for the adapter
+// (API side) and emitter (worker side). Captured at module scope so graceful
+// shutdown can quit them — otherwise each restart leaks Redis connections.
+let adapterPub: Redis | null = null;
+let adapterSub: Redis | null = null;
+let emitterClient: Redis | null = null;
 
 /**
  * Cross-process emitter for processes that have NO local Socket.IO server
@@ -32,9 +40,21 @@ let emitter: Emitter | null = null;
 function getEmitter(): Emitter {
   if (!emitter) {
     // Dedicated connection — never reuse the command/BullMQ connection for pub/sub.
-    emitter = new Emitter(redis.duplicate());
+    emitterClient = redis.duplicate();
+    emitter = new Emitter(emitterClient);
   }
   return emitter;
+}
+
+/**
+ * Quit the pub/sub connections this module opened (adapter + emitter).
+ * Call from graceful shutdown before quitting the main Redis connection.
+ */
+export async function closeSocketRedis(): Promise<void> {
+  const clients = [adapterPub, adapterSub, emitterClient].filter(
+    (c): c is Redis => c !== null,
+  );
+  await Promise.allSettled(clients.map((c) => c.quit()));
 }
 
 /**
@@ -53,7 +73,9 @@ export function initSocketIO(httpServer: HttpServer): Server {
 
   // Redis adapter: share rooms across every API replica. Pub and sub MUST be
   // separate connections from the command connection, hence two duplicates.
-  io.adapter(createAdapter(redis.duplicate(), redis.duplicate()));
+  adapterPub = redis.duplicate();
+  adapterSub = redis.duplicate();
+  io.adapter(createAdapter(adapterPub, adapterSub));
   logger.info(
     "Socket.IO Redis adapter attached (multi-replica fan-out enabled)",
   );

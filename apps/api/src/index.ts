@@ -28,7 +28,7 @@ import logger, { colors, statusColor } from "./lib/logger.js";
 import routes from "./routes.js";
 import redis from "./lib/redis.js";
 import prisma from "./lib/prisma.js";
-import { initSocketIO } from "./lib/socket.js";
+import { initSocketIO, closeSocketRedis } from "./lib/socket.js";
 import { startEmailWorker, stopEmailWorker } from "./workers/email.worker.js";
 import {
   startAIClassificationWorker,
@@ -122,15 +122,25 @@ async function shutdown(signal: string): Promise<void> {
   shuttingDown = true;
   logger.info({ signal }, "API shutting down gracefully");
 
-  server.close(() => logger.info("HTTP server closed"));
-
   try {
+    // Stop accepting new connections and wait for in-flight requests to drain
+    // before tearing down Redis/Prisma underneath them.
+    await new Promise<void>((resolve) => {
+      server.close((err) => {
+        if (err) logger.error({ err }, "Error closing HTTP server");
+        else logger.info("HTTP server closed");
+        resolve();
+      });
+    });
+
     if (runWorkersInApi) {
       await Promise.allSettled([
         stopEmailWorker(),
         stopAIClassificationWorker(),
       ]);
     }
+    // Close the Socket.IO adapter/emitter pub-sub connections, then the main one.
+    await closeSocketRedis();
     await Promise.allSettled([redis.quit(), prisma.$disconnect()]);
     logger.info("API shutdown complete");
     process.exit(0);
