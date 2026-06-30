@@ -26,9 +26,14 @@ import "dotenv/config"; // Load .env variables into process.env
 
 import logger, { colors, statusColor } from "./lib/logger.js";
 import routes from "./routes.js";
+import redis from "./lib/redis.js";
+import prisma from "./lib/prisma.js";
 import { initSocketIO } from "./lib/socket.js";
-import { startEmailWorker } from "./workers/email.worker.js";
-import { startAIClassificationWorker } from "./workers/ai-classification.worker.js";
+import { startEmailWorker, stopEmailWorker } from "./workers/email.worker.js";
+import {
+  startAIClassificationWorker,
+  stopAIClassificationWorker,
+} from "./workers/ai-classification.worker.js";
 import { startRenewalCron } from "./cron/renewal.cron.js";
 import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
 import { notFoundHandler } from "./middlewares/not-found.middleware.js";
@@ -79,12 +84,23 @@ app.use(globalErrorHandler);
 // --- Initialize Socket.IO ---
 initSocketIO(server);
 
-// --- Start Background Workers ---
-startEmailWorker();
-startAIClassificationWorker();
+// --- Start Background Workers & Cron (optional) ---
+// By default the API runs the background workers in-process — this keeps
+// `pnpm dev` and a single-box prod deploy as one process (backward compatible).
+// In a scaled topology (Compose/K8s) set RUN_BACKGROUND_WORKERS=false on the API
+// replicas and run `worker.ts` as a separate process so work isn't duplicated.
+const runWorkersInApi = process.env.RUN_BACKGROUND_WORKERS !== "false";
 
-// --- Start Cron Jobs ---
-startRenewalCron();
+if (runWorkersInApi) {
+  startEmailWorker();
+  startAIClassificationWorker();
+  startRenewalCron();
+  logger.info("Background workers + renewal cron started in-process (API)");
+} else {
+  logger.info(
+    "RUN_BACKGROUND_WORKERS=false — workers/cron run in a separate worker process",
+  );
+}
 
 // --- Unhandled Rejection & Uncaught Exception Handlers ---
 process.on("unhandledRejection", (reason: unknown) => {
@@ -95,6 +111,37 @@ process.on("uncaughtException", (err: Error) => {
   logger.fatal({ err }, "Uncaught Exception — shutting down");
   process.exit(1);
 });
+
+// --- Graceful Shutdown ---
+// Stop accepting new connections, drain in-flight workers (if running here),
+// then disconnect Redis/Prisma so rolling deploys don't drop in-flight work.
+let shuttingDown = false;
+
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info({ signal }, "API shutting down gracefully");
+
+  server.close(() => logger.info("HTTP server closed"));
+
+  try {
+    if (runWorkersInApi) {
+      await Promise.allSettled([
+        stopEmailWorker(),
+        stopAIClassificationWorker(),
+      ]);
+    }
+    await Promise.allSettled([redis.quit(), prisma.$disconnect()]);
+    logger.info("API shutdown complete");
+    process.exit(0);
+  } catch (err) {
+    logger.error({ err }, "Error during API shutdown");
+    process.exit(1);
+  }
+}
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
 
 // --- Start Server ---
 server.listen(PORT, () => {

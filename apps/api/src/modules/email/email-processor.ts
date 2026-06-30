@@ -13,6 +13,7 @@
 
 import prisma from "../../lib/prisma.js";
 import { emitTicketEvent } from "../../lib/socket.js";
+import { createWithTicketNumber } from "../../lib/ticket-number.js";
 import { enqueueAIClassificationJob } from "../../lib/queue.js";
 import logger from "../../lib/logger.js";
 
@@ -147,18 +148,6 @@ async function findOrCreateCustomer(
 }
 
 /**
- * Generate the next incremental ticket number for a workspace.
- */
-async function getNextTicketNumber(workspaceId: string): Promise<number> {
-  const last = await prisma.ticket.findFirst({
-    where: { workspaceId },
-    orderBy: { ticketNumber: "desc" },
-    select: { ticketNumber: true },
-  });
-  return (last?.ticketNumber ?? 0) + 1;
-}
-
-/**
  * Create a new ticket from an inbound email (new conversation).
  */
 async function createTicketFromEmail(
@@ -175,32 +164,36 @@ async function createTicketFromEmail(
     emailAccountId,
   } = email;
 
-  const ticketNumber = await getNextTicketNumber(workspaceId);
-
   // Prefer HTML body for rich formatting, fallback to plain text
   const description = bodyHtml || bodyPlain || "(No content)";
 
-  const ticket = await prisma.ticket.create({
-    data: {
-      ticketNumber,
-      subject: subject || "(No subject)",
-      description,
-      source: "EMAIL",
-      customerId,
-      workspaceId,
-      // Create the EmailMessage record in the same transaction
-      emailMessages: {
-        create: {
-          messageId,
-          references,
-          workspaceId,
+  // Collision-safe per-workspace number (retries on P2002 under concurrent
+  // workers). Note: a P2002 on the EmailMessage's [messageId, workspaceId]
+  // unique constraint is NOT a ticketNumber conflict, so it propagates and the
+  // duplicate email is correctly rejected rather than retried.
+  const ticket = await createWithTicketNumber(workspaceId, (ticketNumber) =>
+    prisma.ticket.create({
+      data: {
+        ticketNumber,
+        subject: subject || "(No subject)",
+        description,
+        source: "EMAIL",
+        customerId,
+        workspaceId,
+        // Create the EmailMessage record in the same transaction
+        emailMessages: {
+          create: {
+            messageId,
+            references,
+            workspaceId,
+          },
         },
       },
-    },
-    include: {
-      customer: { select: { id: true, name: true, email: true } },
-    },
-  });
+      include: {
+        customer: { select: { id: true, name: true, email: true } },
+      },
+    }),
+  );
 
   logger.info(
     {

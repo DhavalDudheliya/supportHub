@@ -7,7 +7,7 @@
 ## Why this tier (real gap)
 
 Today `apps/api/src/index.ts` starts **everything in one process**: the Express API, the Socket.IO
-server, *both* BullMQ workers, and the node‑cron renewal job. That has three concrete distributed
+server, _both_ BullMQ workers, and the node‑cron renewal job. That has three concrete distributed
 defects the moment you run more than one replica:
 
 1. **Socket.IO rooms are in‑memory** (`lib/socket.ts`) → an event emitted on replica A never reaches a
@@ -17,6 +17,29 @@ defects the moment you run more than one replica:
 3. Workers compete with HTTP traffic for the same event loop, and a crash takes everything down.
 
 This is **the** distributed‑systems centerpiece of the roadmap.
+
+## Status (as of 2026-06-28)
+
+**Done.** The process split is implemented and backward‑compatible:
+
+- **Process split** — new `apps/api/src/worker.ts` runs the BullMQ workers + renewal cron with
+  no HTTP/Socket.IO. `index.ts` gates them behind `RUN_BACKGROUND_WORKERS` (default keeps `pnpm dev`
+  and the single‑box prod deploy as one process). Scripts `dev:worker` / `start:worker` added.
+- **Cross‑process real‑time** — `socket.ts` attaches the `@socket.io/redis-adapter` on API replicas
+  and `emitTicketEvent` falls back to a `@socket.io/redis-emitter` when there's no local `io`
+  (worker process) — so worker‑emitted events reach browser sockets on any replica.
+- **Leader‑elected cron** — `renewal.cron.ts` wraps each tick in a Redis `SET … NX PX` lock
+  (10‑min TTL) with a Lua compare‑and‑delete release; only the lock winner runs the renewal.
+- **`ticketNumber` race** — replaced `MAX+1` read‑then‑insert with `createWithTicketNumber()`
+  (`lib/ticket-number.ts`): optimistic insert + retry on `P2002`, no schema change.
+- **Graceful shutdown** — both entrypoints handle SIGTERM/SIGINT: drain BullMQ workers, then
+  disconnect Redis/Prisma.
+- **Compose** — `docker-compose.prod.yml` gained an opt‑in `worker` service (profile `scaled`);
+  default `up -d` stays single‑process.
+
+Verified: `pnpm --filter api typecheck` + `build` clean, worker entrypoint boots. **Still to demo:**
+the multi‑replica leader‑election / cross‑process‑emit / concurrency tests in the DoD (best run
+against a local full stack once T1's `docker-compose.full.yml` lands).
 
 ## Résumé value
 
@@ -35,21 +58,23 @@ graceful shutdown hooks (basic).
 ## Plan / tasks
 
 ### A. Process split
-1. **`[ ]` New worker entrypoint** — `apps/api/src/worker.ts`: load env, start `startEmailWorker()`,
+
+1. **`[x]` New worker entrypoint** — `apps/api/src/worker.ts`: load env, start `startEmailWorker()`,
    `startAIClassificationWorker()`, `startRenewalCron()`; **no HTTP/Socket.IO server**; attach
    `unhandledRejection` / `uncaughtException` handlers.
-2. **`[ ]` Gate workers in the API** — in `index.ts`, only start workers/cron when
+2. **`[x]` Gate workers in the API** — in `index.ts`, only start workers/cron when
    `process.env.RUN_BACKGROUND_WORKERS !== "false"`. Default (unset) keeps `pnpm dev` as a single
    process (backward compatible); Compose/K8s set `RUN_BACKGROUND_WORKERS=false` on the API and run
    `worker.ts` separately.
-3. **`[ ]` Scripts** — add `"dev:worker": "tsx watch src/worker.ts"` and
+3. **`[x]` Scripts** — add `"dev:worker": "tsx watch src/worker.ts"` and
    `"start:worker": "node dist/worker.js"` to `apps/api/package.json`.
 
 ### B. Cross‑process real‑time (Socket.IO Redis adapter/emitter)
-4. **`[ ]` Add deps** — `@socket.io/redis-adapter`, `@socket.io/redis-emitter`; update lockfile.
-5. **`[ ]` API side** — in `initSocketIO()` attach `io.adapter(createAdapter(pub, sub))` using
+
+4. **`[x]` Add deps** — `@socket.io/redis-adapter`, `@socket.io/redis-emitter`; update lockfile.
+5. **`[x]` API side** — in `initSocketIO()` attach `io.adapter(createAdapter(pub, sub))` using
    `redis.duplicate()` clients. Now multiple API replicas share rooms.
-6. **`[ ]` Worker side** — refactor `emitTicketEvent()` so it works from any process: if `io` exists
+6. **`[x]` Worker side** — refactor `emitTicketEvent()` so it works from any process: if `io` exists
    (monolith/API) emit via `io.to(room)`; otherwise emit via a lazy `@socket.io/redis-emitter` `Emitter`
    bound to `redis.duplicate()`. Worker‑produced `ticket:created/tagged/assigned` events now reach
    browser sockets through Redis.
@@ -69,7 +94,8 @@ graph LR
 ```
 
 ### C. Leader‑elected scheduling
-7. **`[ ]` Wrap the cron tick in a Redis lock** — in `renewal.cron.ts`, on each fire attempt
+
+7. **`[x]` Wrap the cron tick in a Redis lock** — in `renewal.cron.ts`, on each fire attempt
    `SET cron:lock:renewal <token> PX <ttl> NX`. Only the lock winner runs the renewal body; others log
    "skipped — another instance holds the lock". Release the lock in `finally` only if the token still
    matches (avoid releasing someone else's lock). Result: **exactly‑one runner per tick** regardless of
@@ -90,16 +116,18 @@ sequenceDiagram
 ```
 
 ### D. Idempotency / correctness hardening
-8. **`[ ]` Fix the `ticketNumber` race** — replace `MAX(ticketNumber)+1` read‑then‑insert (in
+
+8. **`[x]` Fix the `ticketNumber` race** — replace `MAX(ticketNumber)+1` read‑then‑insert (in
    `ticket.service.ts` and `email-processor.ts`) with one of: a Postgres sequence per workspace, a
    `$transaction` + retry on `P2002`, or a Redis `INCR` counter keyed by workspace. Document the
    trade‑off (sequence = simplest + DB‑native).
-9. **`[ ]` Confirm job idempotency holds under the split** — re‑verify BullMQ `jobId` dedup +
+9. **`[x]` Confirm job idempotency holds under the split** — re‑verify BullMQ `jobId` dedup +
    `@@unique([messageId, workspaceId])` still make retries safe across multiple worker replicas (they
    do; document why).
 
 ### E. Graceful shutdown (basic)
-10. **`[ ]` SIGTERM handling** — on `SIGTERM`/`SIGINT`: stop accepting new work, `worker.close()` BullMQ
+
+10. **`[x]` SIGTERM handling** — on `SIGTERM`/`SIGINT`: stop accepting new work, `worker.close()` BullMQ
     workers (let in‑flight jobs finish), close the HTTP server, disconnect Redis/Prisma. (Deepened in T5.)
 
 ## Definition of Done (demoable)

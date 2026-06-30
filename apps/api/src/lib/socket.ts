@@ -13,10 +13,29 @@
 
 import { Server as HttpServer } from "http";
 import { Server, Socket } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
+import { Emitter } from "@socket.io/redis-emitter";
+import redis from "./redis.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 import logger from "./logger.js";
 
 let io: Server;
+
+/**
+ * Cross-process emitter for processes that have NO local Socket.IO server
+ * (the worker). It publishes events to the same Redis channels the API
+ * replicas' Redis adapter listens on, so worker-produced events fan out to
+ * browser sockets. Created lazily on first use.
+ */
+let emitter: Emitter | null = null;
+
+function getEmitter(): Emitter {
+  if (!emitter) {
+    // Dedicated connection — never reuse the command/BullMQ connection for pub/sub.
+    emitter = new Emitter(redis.duplicate());
+  }
+  return emitter;
+}
 
 /**
  * Initialize Socket.IO and attach to the HTTP server.
@@ -31,6 +50,13 @@ export function initSocketIO(httpServer: HttpServer): Server {
     },
     path: "/socket.io",
   });
+
+  // Redis adapter: share rooms across every API replica. Pub and sub MUST be
+  // separate connections from the command connection, hence two duplicates.
+  io.adapter(createAdapter(redis.duplicate(), redis.duplicate()));
+  logger.info(
+    "Socket.IO Redis adapter attached (multi-replica fan-out enabled)",
+  );
 
   // --- JWT Authentication Middleware ---
   io.use((socket: Socket, next) => {
@@ -106,11 +132,16 @@ export function emitTicketEvent(
     | "ticket:assigned",
   data: unknown,
 ): void {
-  if (!io) {
-    logger.warn("Socket.IO not initialized — skipping emit");
-    return;
+  const room = `workspace:${workspaceId}`;
+
+  if (io) {
+    // API process: emit directly; the Redis adapter mirrors it to other replicas.
+    io.to(room).emit(event, data);
+  } else {
+    // Worker process: no local Socket.IO server — publish via the Redis emitter
+    // so API replicas deliver it to the workspace's browser sockets.
+    getEmitter().to(room).emit(event, data);
   }
-  io.to(`workspace:${workspaceId}`).emit(event, data);
 }
 
 export function getIO(): Server {
