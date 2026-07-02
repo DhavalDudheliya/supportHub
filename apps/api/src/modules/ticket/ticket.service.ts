@@ -1,4 +1,5 @@
 import prisma from "../../lib/prisma.js";
+import { createWithTicketNumber } from "../../lib/ticket-number.js";
 import { AppError } from "../../errors/index.js";
 import {
   CreateTicketInput,
@@ -7,22 +8,10 @@ import {
   ListTicketsQuery,
 } from "./ticket.types.js";
 
-/** Generate the next incremental ticket number for a workspace. */
-async function getNextTicketNumber(workspaceId: string): Promise<number> {
-  const last = await prisma.ticket.findFirst({
-    where: { workspaceId },
-    orderBy: { ticketNumber: "desc" },
-    select: { ticketNumber: true },
-  });
-  return (last?.ticketNumber ?? 0) + 1;
-}
-
 export async function createTicket(
   data: CreateTicketInput,
   workspaceId: string,
 ) {
-  const ticketNumber = await getNextTicketNumber(workspaceId);
-
   // Handle tags — find existing tags by name within the workspace
   let tagConnections: { id: string }[] = [];
   if (data.tags && data.tags.length > 0) {
@@ -35,23 +24,26 @@ export async function createTicket(
     tagConnections = tagRecords.map((t) => ({ id: t.id }));
   }
 
-  return prisma.ticket.create({
-    data: {
-      ticketNumber,
-      subject: data.subject,
-      description: data.description,
-      priority: data.priority ?? "MEDIUM",
-      customerId: data.customerId,
-      assigneeId: data.assigneeId,
-      workspaceId,
-      tags: { connect: tagConnections },
-    },
-    include: {
-      customer: true,
-      assignee: true,
-      tags: true,
-    },
-  });
+  // Collision-safe per-workspace number (retries on P2002 under concurrency).
+  return createWithTicketNumber(workspaceId, (ticketNumber) =>
+    prisma.ticket.create({
+      data: {
+        ticketNumber,
+        subject: data.subject,
+        description: data.description,
+        priority: data.priority ?? "MEDIUM",
+        customerId: data.customerId,
+        assigneeId: data.assigneeId,
+        workspaceId,
+        tags: { connect: tagConnections },
+      },
+      include: {
+        customer: true,
+        assignee: true,
+        tags: true,
+      },
+    }),
+  );
 }
 
 export async function listTickets(

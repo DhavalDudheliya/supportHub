@@ -7,10 +7,12 @@
   "main": "dist/src/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:worker": "tsx watch src/worker.ts",
     "prisma:generate": "pnpm exec prisma generate",
     "build": "pnpm run prisma:generate && tsc -p tsconfig.build.json",
     "build:prod": "pnpm run prisma:generate && node --max-old-space-size=1536 ./node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "start": "node dist/src/index.js",
+    "start:worker": "node dist/src/worker.js",
     "typecheck": "tsc --noEmit",
     "seed": "dotenv -e .env -- tsx src/scripts/seed.ts"
   },
@@ -21,6 +23,8 @@
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.1",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "@socket.io/redis-emitter": "^5.1.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.72.0",
     "cors": "^2.8.6",

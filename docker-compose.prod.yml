@@ -1,6 +1,13 @@
 # Production compose file — lives on the EC2 box.
 # `docker compose -f docker-compose.prod.yml pull && up -d` after each release.
 # Redis is a managed/hosted instance — its connection string lives in .env as REDIS_URL.
+#
+# Topologies:
+#   Single-process (default):  `up -d`            → API runs workers + cron in-process.
+#   Split web/worker tiers:    set RUN_BACKGROUND_WORKERS=false in .env, then
+#                              `up -d --profile scaled`  → API serves HTTP/Socket.IO only,
+#                              the `worker` service runs BullMQ workers + the leader-elected
+#                              cron. Scale workers with `--scale worker=3`.
 services:
   api:
     # Replace owner if your GHCR namespace differs. Must be lowercase.
@@ -9,6 +16,8 @@ services:
     env_file: .env # DATABASE_URL, REDIS_URL (hosted), JWT/encryption keys, OAuth creds, etc.
     environment:
       PORT: 5000
+      # Unset/anything-but-"false" => API also runs workers (single-process default).
+      # Set RUN_BACKGROUND_WORKERS=false in .env to offload work to the `worker` service.
     ports:
       - "5000:5000"
     restart: unless-stopped
@@ -18,3 +27,15 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  # Independently-scalable background tier. Same image, different entrypoint:
+  # runs the BullMQ workers + leader-elected renewal cron, no HTTP/Socket.IO.
+  # Opt-in via the "scaled" profile so the default deploy stays single-process.
+  worker:
+    image: ghcr.io/dhavaldudheliya/supporthub-api:latest
+    profiles: ["scaled"]
+    env_file: .env
+    # Override the image's web CMD: no migrations here (the API image runs those),
+    # no HTTP server — just the worker entrypoint.
+    command: ["node", "dist/src/worker.js"]
+    restart: unless-stopped
