@@ -58,10 +58,11 @@ export function HeroSection() {
           </div>
         </motion.div>
 
-        {/* Main Headline */}
+        {/* Main Headline — visible by default so crawlers/OAuth reviewers
+            see the app name and purpose without executing animation JS */}
         <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ y: 30 }}
+          animate={{ y: 0 }}
           transition={{ duration: 0.7, delay: 0.15 }}
           className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05] mb-6 text-white"
         >
@@ -78,8 +79,8 @@ export function HeroSection() {
         {/* Subheadline — static for crawlers, animated for users */}
         <p className="text-lg sm:text-xl text-white/50 max-w-3xl mx-auto mb-10 leading-relaxed">
           <motion.span
-            initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            initial={{ y: 20 }}
+            animate={{ y: 0 }}
             transition={{ duration: 0.7, delay: 0.3 }}
             className="block"
           >
