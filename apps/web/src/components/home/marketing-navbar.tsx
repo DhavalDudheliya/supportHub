@@ -49,12 +49,15 @@ export function MarketingNavbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center group">
+          <Link href="/" className="flex items-center gap-2.5 group">
             <img
               src="/logos/logo.png"
               alt="SupportHub Logo"
               className="h-8 w-auto object-contain transition-opacity hover:opacity-90"
             />
+            <span className="text-lg font-semibold tracking-tight text-white">
+              SupportHub
+            </span>
           </Link>
 
           {/* Desktop nav */}
